@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RPG Maker Save Export / Import (MV & MZ, HTML5)</title>
+  <style>
+    :root {
+      --bg: #0b0f14;         /* deep slate */
+      --panel: #111825;      /* panel surface */
+      --muted: #9fb0c0;      /* text secondary */
+      --text: #e6eef7;       /* text primary */
+      --brand: #4cc3ff;      /* accent */
+      --brand-600:#2aa7f0;   /* accent hover */
+      --ok: #3ddc84;
+      --warn: #ffb454;
+      --bad: #ff6b6b;
+      --chip: #1a2433;
+      --chip-brd: #2a3a55;
+      --focus: 0 0 0 3px rgba(76,195,255,.25);
+    }
+    html,body{height:100%}
+    body{
+      margin:0; background: radial-gradient(1200px 800px at 80% -20%, rgba(76,195,255,.08), transparent 60%),
+                                radial-gradient(800px 600px at 10% 120%, rgba(61,220,132,.07), transparent 60%),
+                                var(--bg);
+      color:var(--text);
+      font: 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    .wrap{max-width:1024px;margin:40px auto;padding:0 16px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .title{font-weight:800;font-size:clamp(22px,3vw,30px);letter-spacing:.2px}
+    .subtitle{color:var(--muted);font-size:14px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.0));border:1px solid #1a2536;border-radius:16px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+    .grid{display:grid;grid-template-columns: 1fr; gap:16px}
+    @media(min-width:900px){.grid{grid-template-columns: 1fr 1fr}}
+    .btn{appearance:none;border:1px solid #27506b;background:linear-gradient(180deg,#153045,#0f2638);color:var(--text);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:.15s;}
+    .btn:hover{border-color:#2f668a;transform:translateY(-1px)}
+    .btn:focus{outline:none;box-shadow:var(--focus)}
+    .btn.primary{background:linear-gradient(180deg, #0e6aa8, #0a5486);border-color:#0d5e96}
+    .btn.primary:hover{background:linear-gradient(180deg,#0f77bf,#0b5e9a)}
+    .btn.good{border-color:#2e6b52;background:linear-gradient(180deg,#144335,#0d2f25)}
+    .btn.bad{border-color:#6b2e2e;background:linear-gradient(180deg,#431414,#2f0d0d)}
+    .btn.link{background:transparent;border-color:transparent;padding:0;color:var(--brand)}
+
+    .klist{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}
+    .chip{border:1px solid var(--chip-brd);background:linear-gradient(180deg,#0e1725,#0b1320);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+    .chip strong{color:var(--text)}
+
+    .muted{color:var(--muted)}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+    input[type="file"]{display:none}
+    .filelabel{display:inline-flex;align-items:center;gap:10px}
+    .filedrop{border:1.5px dashed #284057;border-radius:14px;padding:18px;text-align:center;background:rgba(255,255,255,.02)}
+    .filedrop.drag{border-color:var(--brand)}
+    .help{font-size:13px;color:var(--muted)}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .spacer{flex:1}
+    .tbl{width:100%;border-collapse:separate;border-spacing:0 8px}
+    .tbl th{font-size:12px;color:var(--muted);font-weight:700;text-align:left;padding:0 10px}
+    .tbl td{background:linear-gradient(180deg,#0a1522,#08101b);border:1px solid #1a2536;border-left-width:1px;border-right-width:1px;padding:10px;border-radius:10px}
+    .tbl td:first-child{border-right:none}
+    .tbl td:last-child{border-left:none}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #25475c;background:#0d2132;color:var(--muted)}
+    .badge.ok{color:var(--ok);border-color:#1f5b45;background:#0f2b22}
+    .badge.warn{color:var(--warn);border-color:#54421f;background:#2a2314}
+    .badge.bad{color:var(--bad);border-color:#5b1f1f;background:#2b0f0f}
+    .sr{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
+    .foot{margin-top:22px;font-size:12px;color:var(--muted)}
+    .codebox{white-space:pre-wrap;word-break:break-word;background:#0a1522;border:1px solid #1a2536;border-radius:10px;padding:10px;max-height:260px;overflow:auto}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <div class="title">RPG Maker Save Export / Import</div>
+        <div class="subtitle">Works for MV & MZ HTML5 builds that store saves in <span class="mono">localStorage</span>. No server, all in your browser.</div>
+      </div>
+      <div class="row">
+        <button id="btn-scan" class="btn" title="Rescan localStorage">Rescan</button>
+        <button id="btn-export" class="btn primary" title="Export detected save keys">Export</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: Detected keys & actions -->
+      <section class="card">
+        <h2 style="margin:0 0 6px 0">Detected Save Keys</h2>
+        <div class="help">These are keys in <span class="mono">localStorage</span> that look like RPG Maker save data. Select what you want to include in your backup.</div>
+
+        <div id="keyChips" class="klist"></div>
+
+        <table class="tbl" aria-label="Detected keys table">
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Size</th>
+              <th>Type</th>
+              <th>Include</th>
+            </tr>
+          </thead>
+          <tbody id="keyTable"></tbody>
+        </table>
+
+        <div class="row" style="margin-top:8px">
+          <button id="btn-toggle-all" class="btn">Toggle All</button>
+          <button id="btn-delete-selected" class="btn bad" title="Delete selected keys from localStorage">Delete Selected</button>
+          <div class="spacer"></div>
+          <span id="scanBadge" class="badge">Idle</span>
+        </div>
+      </section>
+
+      <!-- RIGHT: Import / Restore -->
+      <section class="card">
+        <h2 style="margin:0 0 6px 0">Import / Restore</h2>
+        <div id="drop" class="filedrop" tabindex="0" role="button" aria-label="Drop a backup file here or browse">
+          <div style="margin-bottom:10px">Drop your backup file here</div>
+          <label class="filelabel btn" for="file">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 16V7.83l2.59 2.58L16 9l-4-4l-4 4l1.41 1.41L11 7.83V16h1z"/></svg>
+            Browse file
+          </label>
+          <input id="file" type="file" accept="application/json,text/plain" />
+          <div class="help">Backups made here use JSON. You can also paste raw text below.</div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button id="btn-apply" class="btn good" disabled>Write To localStorage</button>
+          <button id="btn-clear-preview" class="btn" disabled>Clear Preview</button>
+          <div class="spacer"></div>
+          <span id="importBadge" class="badge">No file</span>
+        </div>
+
+        <h3 style="margin:14px 0 8px">Or paste backup text</h3>
+        <textarea id="paste" class="codebox" rows="8" placeholder='Paste backup JSON (or raw Base64/text) here…'></textarea>
+        <div class="row" style="margin-top:8px">
+          <button id="btn-parse-paste" class="btn">Preview From Text</button>
+        </div>
+
+        <div id="preview" style="display:none;margin-top:14px">
+          <div class="help">Preview of keys that will be written. Existing keys will be overwritten.</div>
+          <div id="previewList" class="klist"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- EXPORT AREA -->
+    <section class="card" style="margin-top:16px">
+      <h2 style="margin:0 0 6px 0">Create Backup</h2>
+      <div class="help">Export selected keys to a JSON file or copy as text. Keep this safe.</div>
+      <div class="row" style="margin-top:6px">
+        <button id="btn-download" class="btn primary" disabled>Download JSON</button>
+        <button id="btn-copy" class="btn" disabled>Copy As Text</button>
+        <div class="spacer"></div>
+        <span id="exportBadge" class="badge">Nothing selected</span>
+      </div>
+      <details style="margin-top:10px">
+        <summary class="help">What counts as a “save key”?</summary>
+        <div class="help" style="margin-top:8px">
+          This tool scans your browser’s <span class="mono">localStorage</span> for common RPG Maker MV/MZ keys (e.g. <span class="mono">RPG File1</span>, <span class="mono">RPG Global</span>, <span class="mono">RPGMZ Save1</span>, etc.). Different games sometimes add prefixes or store config separately. You can still export anything by checking it in the list.
+        </div>
+      </details>
+    </section>
+
+    <p class="foot">Tip: Run this on the same site/origin where the game runs so the save keys appear. All operations happen locally in your browser.</p>
+  </div>
+
+  <script>
+    // --- Utilities ----------------------------------------------------------
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    function bytes(n){
+      if(n < 1024) return n + ' B';
+      if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+      return (n/1024/1024).toFixed(2) + ' MB';
+    }
+
+    function badge(el, text, type){
+      el.textContent = text;
+      el.className = 'badge' + (type? ' ' + type : '');
+    }
+
+    function nowIso(){ return new Date().toISOString(); }
+
+    function looksLikeRpgMakerKey(key, value){
+      // Heuristics covering MV & MZ conventions; not exhaustive
+      const k = key.toLowerCase();
+      if(/^(rpg( ?mv| ?mz)?|save|global)/.test(k)) return true;
+      if(/rpgm[vz]\s*save/.test(k)) return true; // e.g. "RPGMZ Save1"
+      if(/rpg file\d+/.test(k)) return true;     // MV "RPG File1"
+      if(/rpg global/.test(k)) return true;      // MV "RPG Global"
+      // Value hint: a lot of MV/MZ JSON or LZString-base64
+      try{
+        if(value && value.length > 2){
+          // JSON?
+          if((value[0]==='{' && value.at(-1)==='}') || (value[0]==='[' && value.at(-1)===']')) return true;
+          // Base64-ish length and charset
+          if(/^[A-Za-z0-9+/=\n\r]+$/.test(value) && value.length > 64) return true;
+        }
+      }catch(e){}
+      return false;
+    }
+
+    function gatherKeys(){
+      const keys = [];
+      for(let i=0;i<localStorage.length;i++){
+        const key = localStorage.key(i);
+        let value;
+        try{ value = localStorage.getItem(key) ?? ''; }catch(e){ value = ''; }
+        const size = new Blob([value]).size;
+        keys.push({ key, value, size, isSave: looksLikeRpgMakerKey(key, value) });
+      }
+      // Sort: suspected save keys first, then by key name
+      keys.sort((a,b)=> (b.isSave - a.isSave) || a.key.localeCompare(b.key));
+      return keys;
+    }
+
+    function makeFile(dataObj){
+      const json = JSON.stringify(dataObj, null, 2);
+      return new Blob([json], {type:'application/json'});
+    }
+
+    function downloadBlob(blob, filename){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    }
+
+    // --- State --------------------------------------------------------------
+    let ALL_KEYS = [];
+    let selected = new Set();
+    let preview = null; // parsed import object
+
+    // --- Renderers ----------------------------------------------------------
+    function renderList(){
+      const tbody = $('#keyTable');
+      tbody.innerHTML = '';
+      const chips = $('#keyChips');
+      chips.innerHTML = '';
+
+      ALL_KEYS.forEach((row, idx)=>{
+        // Chips for a quick glance
+        if(row.isSave){
+          const c = document.createElement('span');
+          c.className = 'chip';
+          c.innerHTML = `<strong>${row.key}</strong> · ${bytes(row.size)}`;
+          chips.appendChild(c);
+        }
+        // Table rows
+        const tr = document.createElement('tr');
+        const tdK = document.createElement('td');
+        const tdS = document.createElement('td');
+        const tdT = document.createElement('td');
+        const tdC = document.createElement('td');
+
+        tdK.textContent = row.key;
+        tdS.textContent = bytes(row.size);
+        tdT.innerHTML = row.isSave ? '<span class="badge ok">Save‑like</span>' : '<span class="badge">Other</span>';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = row.isSave; // preselect
+        if(cb.checked) selected.add(row.key);
+        cb.addEventListener('change', ()=>{
+          if(cb.checked) selected.add(row.key); else selected.delete(row.key);
+          updateExportButtons();
+        });
+        tdC.appendChild(cb);
+
+        [tdK,tdS,tdT,tdC].forEach(td=>{ td.className=''; });
+        tr.appendChild(tdK); tr.appendChild(tdS); tr.appendChild(tdT); tr.appendChild(tdC);
+        tbody.appendChild(tr);
+      });
+
+      updateExportButtons();
+    }
+
+    function updateExportButtons(){
+      const count = selected.size;
+      const total = ALL_KEYS.filter(k=>selected.has(k.key)).reduce((a,b)=>a+b.size,0);
+      $('#btn-download').disabled = count===0;
+      $('#btn-copy').disabled = count===0;
+      badge($('#exportBadge'), count===0 ? 'Nothing selected' : `${count} key${count>1?'s':''} · ${bytes(total)}`, count? 'ok' : '');
+    }
+
+    function rescan(){
+      badge($('#scanBadge'), 'Scanning…', 'warn');
+      selected.clear();
+      ALL_KEYS = gatherKeys();
+      renderList();
+      const suspected = ALL_KEYS.filter(k=>k.isSave).length;
+      badge($('#scanBadge'), suspected ? `Found ${suspected} save‑like key${suspected>1?'s':''}` : 'No obvious save keys', suspected ? 'ok' : 'bad');
+    }
+
+    // --- Export -------------------------------------------------------------
+    function buildExportObject(){
+      const keys = ALL_KEYS.filter(row=>selected.has(row.key)).map(({key,value,size})=>({key,value,size}));
+      return {
+        format: 'RPGMakerWebSavePack',
+        version: 1,
+        exportedAt: nowIso(),
+        origin: location.origin,
+        userAgent: navigator.userAgent,
+        count: keys.length,
+        keys
+      };
+    }
+
+    function copyAsText(){
+      const obj = buildExportObject();
+      const text = JSON.stringify(obj);
+      navigator.clipboard.writeText(text).then(()=>{
+        badge($('#exportBadge'), 'Copied to clipboard', 'ok');
+      }).catch(()=>{
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+        badge($('#exportBadge'), 'Copied (fallback)', 'ok');
+      });
+    }
+
+    // --- Import -------------------------------------------------------------
+    function parseBackupText(text){
+      // Accept: JSON (our format). If user pasted raw JSON string, try JSON.parse.
+      try{
+        const obj = JSON.parse(text);
+        // quick sanity
+        if(obj && obj.keys && Array.isArray(obj.keys)) return obj;
+      }catch(e){ /* not JSON */ }
+      // Otherwise, treat as naive key=value lines (very lenient)
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const keys = [];
+      lines.forEach(line=>{
+        const m = line.match(/^([^=:\s]+)[=:\s](.+)$/);
+        if(m){ keys.push({key:m[1], value:m[2], size:new Blob([m[2]]).size}); }
+      });
+      if(keys.length){
+        return { format:'LooseText', version:1, exportedAt: nowIso(), origin:'unknown', userAgent:'', count: keys.length, keys };
+      }
+      throw new Error('Unrecognized backup text');
+    }
+
+    function showPreview(obj){
+      preview = obj;
+      const list = $('#previewList');
+      list.innerHTML = '';
+      obj.keys.forEach(k=>{
+        const c = document.createElement('span');
+        c.className = 'chip';
+        const exists = localStorage.getItem(k.key) != null;
+        c.innerHTML = `<strong>${k.key}</strong> · ${bytes(k.size)} ${exists? '· <span class="muted">(will overwrite)</span>':''}`;
+        list.appendChild(c);
+      });
+      $('#preview').style.display = 'block';
+      $('#btn-apply').disabled = false;
+      $('#btn-clear-preview').disabled = false;
+      badge($('#importBadge'), `Ready: ${obj.keys.length} key${obj.keys.length>1?'s':''}`, 'ok');
+    }
+
+    function clearPreview(){
+      preview = null;
+      $('#preview').style.display = 'none';
+      $('#btn-apply').disabled = true;
+      $('#btn-clear-preview').disabled = true;
+      badge($('#importBadge'), 'No file', '');
+    }
+
+    function applyPreview(){
+      if(!preview) return;
+      let written = 0;
+      preview.keys.forEach(({key,value})=>{
+        try{ localStorage.setItem(key, value); written++; }
+        catch(e){ console.warn('Failed to write key', key, e); }
+      });
+      clearPreview();
+      rescan();
+      badge($('#scanBadge'), `Wrote ${written} key${written>1?'s':''}`, 'ok');
+    }
+
+    // --- Event wiring -------------------------------------------------------
+    $('#btn-scan').addEventListener('click', rescan);
+    $('#btn-toggle-all').addEventListener('click', ()=>{
+      const rows = ALL_KEYS.map(r=>r.key);
+      const selectAll = rows.some(k=>!selected.has(k));
+      rows.forEach(k=>{ if(selectAll) selected.add(k); else selected.delete(k); });
+      // re-render checkboxes
+      renderList();
+    });
+
+    $('#btn-delete-selected').addEventListener('click', ()=>{
+      if(!selected.size) return;
+      if(!confirm(`Delete ${selected.size} selected key(s) from localStorage? This cannot be undone.`)) return;
+      let del=0; selected.forEach(k=>{ try{ localStorage.removeItem(k); del++; }catch(e){} });
+      selected.clear();
+      rescan();
+      badge($('#scanBadge'), `Deleted ${del} key${del>1?'s':''}`, 'bad');
+    });
+
+    $('#btn-export').addEventListener('click', ()=>{
+      const obj = buildExportObject();
+      const info = `${obj.count} key${obj.count>1?'s':''}`;
+      badge($('#exportBadge'), `Ready: ${info}`, 'ok');
+    });
+
+    $('#btn-download').addEventListener('click', ()=>{
+      const obj = buildExportObject();
+      const blob = makeFile(obj);
+      const filename = `rpgmaker-save-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+      downloadBlob(blob, filename);
+      badge($('#exportBadge'), 'Downloaded', 'ok');
+    });
+
+    $('#btn-copy').addEventListener('click', copyAsText);
+
+    // File import
+    const drop = $('#drop');
+    const fileInput = $('#file');
+
+    function handleFile(file){
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const obj = parseBackupText(String(reader.result));
+          showPreview(obj);
+        }catch(e){
+          badge($('#importBadge'), 'Could not parse file', 'bad');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    fileInput.addEventListener('change', (e)=>{
+      const file = e.target.files?.[0];
+      if(file){ handleFile(file); }
+    });
+
+    ;['dragenter','dragover'].forEach(evt=> drop.addEventListener(evt, (e)=>{ e.preventDefault(); drop.classList.add('drag'); }));
+    ;['dragleave','drop'].forEach(evt=> drop.addEventListener(evt, (e)=>{ e.preventDefault(); drop.classList.remove('drag'); }));
+    drop.addEventListener('drop', (e)=>{
+      const f = e.dataTransfer.files?.[0]; if(f) handleFile(f);
+    });
+
+    $('#btn-parse-paste').addEventListener('click', ()=>{
+      const text = $('#paste').value.trim();
+      if(!text) { badge($('#importBadge'),'Nothing pasted',''); return; }
+      try{ showPreview(parseBackupText(text)); }
+      catch(e){ badge($('#importBadge'),'Could not parse text','bad'); }
+    });
+
+    $('#btn-clear-preview').addEventListener('click', clearPreview);
+    $('#btn-apply').addEventListener('click', ()=>{
+      if(!preview) return;
+      if(!confirm(`Write ${preview.keys.length} key(s) to localStorage? Existing keys with the same name will be overwritten.`)) return;
+      applyPreview();
+    });
+
+    // Initial
+    rescan();
+  </script>
+</body>
+</html>
