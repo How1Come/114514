@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RPG Maker Save Export / Import (MV & MZ, HTML5)</title>
+  <title>RPG Maker Save Export / Import (MV & MZ, HTML5 + .rpgsave)</title>
   <style>
     :root {
       --bg: #0b0f14;         /* deep slate */
@@ -75,11 +75,11 @@
     <header>
       <div>
         <div class="title">RPG Maker Save Export / Import</div>
-        <div class="subtitle">Works for MV & MZ HTML5 builds that store saves in <span class="mono">localStorage</span>. No server, all in your browser.</div>
+        <div class="subtitle">MV & MZ HTML5 saves (localStorage) + direct <span class="mono">.rpgsave</span> import/export. Everything happens locally in your browser.</div>
       </div>
       <div class="row">
         <button id="btn-scan" class="btn" title="Rescan localStorage">Rescan</button>
-        <button id="btn-export" class="btn primary" title="Export detected save keys">Export</button>
+        <button id="btn-export" class="btn primary" title="Export detected save keys">Prepare Export</button>
       </div>
     </header>
 
@@ -87,7 +87,7 @@
       <!-- LEFT: Detected keys & actions -->
       <section class="card">
         <h2 style="margin:0 0 6px 0">Detected Save Keys</h2>
-        <div class="help">These are keys in <span class="mono">localStorage</span> that look like RPG Maker save data. Select what you want to include in your backup.</div>
+        <div class="help">Keys in <span class="mono">localStorage</span> that look like RPG Maker data. Select what you want to export.</div>
 
         <div id="keyChips" class="klist"></div>
 
@@ -114,14 +114,14 @@
       <!-- RIGHT: Import / Restore -->
       <section class="card">
         <h2 style="margin:0 0 6px 0">Import / Restore</h2>
-        <div id="drop" class="filedrop" tabindex="0" role="button" aria-label="Drop a backup file here or browse">
-          <div style="margin-bottom:10px">Drop your backup file here</div>
+        <div id="drop" class="filedrop" tabindex="0" role="button" aria-label="Drop a backup or .rpgsave file here or browse">
+          <div style="margin-bottom:10px">Drop a backup <em>or</em> <span class="mono">.rpgsave</span> here</div>
           <label class="filelabel btn" for="file">
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 16V7.83l2.59 2.58L16 9l-4-4l-4 4l1.41 1.41L11 7.83V16h1z"/></svg>
             Browse file
           </label>
-          <input id="file" type="file" accept="application/json,text/plain" />
-          <div class="help">Backups made here use JSON. You can also paste raw text below.</div>
+          <input id="file" type="file" accept="application/json,text/plain,.rpgsave" />
+          <div class="help">Backups made here use JSON. You can also import/export native <span class="mono">.rpgsave</span> files.</div>
         </div>
         <div class="row" style="margin-top:10px">
           <button id="btn-apply" class="btn good" disabled>Write To localStorage</button>
@@ -146,17 +146,18 @@
     <!-- EXPORT AREA -->
     <section class="card" style="margin-top:16px">
       <h2 style="margin:0 0 6px 0">Create Backup</h2>
-      <div class="help">Export selected keys to a JSON file or copy as text. Keep this safe.</div>
+      <div class="help">Export selected keys to JSON or download native <span class="mono">.rpgsave</span> file(s).</div>
       <div class="row" style="margin-top:6px">
         <button id="btn-download" class="btn primary" disabled>Download JSON</button>
         <button id="btn-copy" class="btn" disabled>Copy As Text</button>
+        <button id="btn-download-rpgsave" class="btn" disabled>Download .rpgsave</button>
         <div class="spacer"></div>
         <span id="exportBadge" class="badge">Nothing selected</span>
       </div>
       <details style="margin-top:10px">
         <summary class="help">What counts as a “save key”?</summary>
         <div class="help" style="margin-top:8px">
-          This tool scans your browser’s <span class="mono">localStorage</span> for common RPG Maker MV/MZ keys (e.g. <span class="mono">RPG File1</span>, <span class="mono">RPG Global</span>, <span class="mono">RPGMZ Save1</span>, etc.). Different games sometimes add prefixes or store config separately. You can still export anything by checking it in the list.
+          This tool scans <span class="mono">localStorage</span> for common RPG Maker MV/MZ keys (e.g. <span class="mono">RPG File1</span>, <span class="mono">RPG Global</span>, <span class="mono">RPGMZ Save1</span>, etc.). Different games sometimes add prefixes or store config separately. You can still export anything by checking it in the list.
         </div>
       </details>
     </section>
@@ -182,6 +183,34 @@
 
     function nowIso(){ return new Date().toISOString(); }
 
+    function isProbablyBase64(str){
+      if(typeof str !== 'string') return false;
+      const s = str.trim();
+      if(!/^[A-Za-z0-9+/=\r\n]+$/.test(s)) return false;
+      if(s.length % 4 !== 0) return false;
+      try{ atob(s.slice(0,100)); return true; }catch(e){ return false; }
+    }
+
+    function b64ToU8(b64){
+      const bin = atob(b64.replace(/\s+/g,''));
+      const len = bin.length;
+      const u8 = new Uint8Array(len);
+      for(let i=0;i<len;i++) u8[i] = bin.charCodeAt(i);
+      return u8;
+    }
+
+    function u8ToB64(u8){
+      let s = '';
+      const chunk = 0x8000;
+      for(let i=0;i<u8.length;i+=chunk){
+        s += String.fromCharCode.apply(null, u8.subarray(i, i+chunk));
+      }
+      return btoa(s);
+    }
+
+    const enc = new TextEncoder();
+    const dec = new TextDecoder();
+
     function looksLikeRpgMakerKey(key, value){
       // Heuristics covering MV & MZ conventions; not exhaustive
       const k = key.toLowerCase();
@@ -189,13 +218,11 @@
       if(/rpgm[vz]\s*save/.test(k)) return true; // e.g. "RPGMZ Save1"
       if(/rpg file\d+/.test(k)) return true;     // MV "RPG File1"
       if(/rpg global/.test(k)) return true;      // MV "RPG Global"
-      // Value hint: a lot of MV/MZ JSON or LZString-base64
+      // Value hint: JSON or Base64-ish
       try{
         if(value && value.length > 2){
-          // JSON?
           if((value[0]==='{' && value.at(-1)==='}') || (value[0]==='[' && value.at(-1)===']')) return true;
-          // Base64-ish length and charset
-          if(/^[A-Za-z0-9+/=\n\r]+$/.test(value) && value.length > 64) return true;
+          if(isProbablyBase64(value) && value.length > 64) return true;
         }
       }catch(e){}
       return false;
@@ -210,7 +237,6 @@
         const size = new Blob([value]).size;
         keys.push({ key, value, size, isSave: looksLikeRpgMakerKey(key, value) });
       }
-      // Sort: suspected save keys first, then by key name
       keys.sort((a,b)=> (b.isSave - a.isSave) || a.key.localeCompare(b.key));
       return keys;
     }
@@ -230,6 +256,32 @@
       setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
     }
 
+    function keyToSlot(key){
+      let m = key.match(/RPG\s*File(\d+)/i);
+      if(m) return { slot: Number(m[1]), type: 'MV' };
+      m = key.match(/RPGMZ\s*Save(\d+)/i);
+      if(m) return { slot: Number(m[1]), type: 'MZ' };
+      return null;
+    }
+
+    function envPreferredType(){
+      const mv = ALL_KEYS.some(k=>/RPG\s*File\d+/i.test(k.key));
+      const mz = ALL_KEYS.some(k=>/RPGMZ\s*Save\d+/i.test(k.key));
+      if(mz && !mv) return 'MZ';
+      if(mv && !mz) return 'MV';
+      return 'MV'; // default
+    }
+
+    function guessKeyForSlot(slot){
+      return envPreferredType()==='MZ' ? `RPGMZ Save${slot}` : `RPG File${slot}`;
+    }
+
+    function guessKeyFromFilename(name){
+      let m = name.match(/(?:file|save|slot)(\d+)\.rpgsave$/i);
+      if(m) return guessKeyForSlot(Number(m[1]));
+      return null;
+    }
+
     // --- State --------------------------------------------------------------
     let ALL_KEYS = [];
     let selected = new Set();
@@ -242,15 +294,13 @@
       const chips = $('#keyChips');
       chips.innerHTML = '';
 
-      ALL_KEYS.forEach((row, idx)=>{
-        // Chips for a quick glance
+      ALL_KEYS.forEach((row)=>{
         if(row.isSave){
           const c = document.createElement('span');
           c.className = 'chip';
           c.innerHTML = `<strong>${row.key}</strong> · ${bytes(row.size)}`;
           chips.appendChild(c);
         }
-        // Table rows
         const tr = document.createElement('tr');
         const tdK = document.createElement('td');
         const tdS = document.createElement('td');
@@ -263,7 +313,7 @@
 
         const cb = document.createElement('input');
         cb.type = 'checkbox';
-        cb.checked = row.isSave; // preselect
+        cb.checked = row.isSave;
         if(cb.checked) selected.add(row.key);
         cb.addEventListener('change', ()=>{
           if(cb.checked) selected.add(row.key); else selected.delete(row.key);
@@ -284,6 +334,7 @@
       const total = ALL_KEYS.filter(k=>selected.has(k.key)).reduce((a,b)=>a+b.size,0);
       $('#btn-download').disabled = count===0;
       $('#btn-copy').disabled = count===0;
+      $('#btn-download-rpgsave').disabled = count===0;
       badge($('#exportBadge'), count===0 ? 'Nothing selected' : `${count} key${count>1?'s':''} · ${bytes(total)}`, count? 'ok' : '');
     }
 
@@ -296,12 +347,12 @@
       badge($('#scanBadge'), suspected ? `Found ${suspected} save‑like key${suspected>1?'s':''}` : 'No obvious save keys', suspected ? 'ok' : 'bad');
     }
 
-    // --- Export -------------------------------------------------------------
+    // --- Export (JSON) ------------------------------------------------------
     function buildExportObject(){
       const keys = ALL_KEYS.filter(row=>selected.has(row.key)).map(({key,value,size})=>({key,value,size}));
       return {
         format: 'RPGMakerWebSavePack',
-        version: 1,
+        version: 2,
         exportedAt: nowIso(),
         origin: location.origin,
         userAgent: navigator.userAgent,
@@ -316,22 +367,47 @@
       navigator.clipboard.writeText(text).then(()=>{
         badge($('#exportBadge'), 'Copied to clipboard', 'ok');
       }).catch(()=>{
-        // Fallback
         const ta = document.createElement('textarea');
         ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
         badge($('#exportBadge'), 'Copied (fallback)', 'ok');
       });
     }
 
+    // --- Export (.rpgsave) --------------------------------------------------
+    function filenameForKey(key){
+      const info = keyToSlot(key);
+      if(info && Number.isFinite(info.slot)) return `file${info.slot}.rpgsave`;
+      return key.replace(/\W+/g,'_') + '.rpgsave';
+    }
+
+    function valueToRpgsaveBytes(value){
+      // If looks like base64 -> decode to bytes; otherwise treat as UTF-8 text
+      if(isProbablyBase64(value)) return b64ToU8(value);
+      return enc.encode(String(value));
+    }
+
+    function exportSelectedAsRpgsave(){
+      const rows = ALL_KEYS.filter(r=>selected.has(r.key));
+      if(!rows.length) return;
+      let exported = 0;
+      rows.forEach((row, i)=>{
+        try{
+          const u8 = valueToRpgsaveBytes(row.value);
+          const blob = new Blob([u8], {type:'application/octet-stream'});
+          const name = filenameForKey(row.key);
+          setTimeout(()=> downloadBlob(blob, name), i*120);
+          exported++;
+        }catch(e){ console.warn('Failed to export', row.key, e); }
+      });
+      badge($('#exportBadge'), `Exported ${exported} .rpgsave`, exported? 'ok':'bad');
+    }
+
     // --- Import -------------------------------------------------------------
     function parseBackupText(text){
-      // Accept: JSON (our format). If user pasted raw JSON string, try JSON.parse.
       try{
         const obj = JSON.parse(text);
-        // quick sanity
         if(obj && obj.keys && Array.isArray(obj.keys)) return obj;
       }catch(e){ /* not JSON */ }
-      // Otherwise, treat as naive key=value lines (very lenient)
       const lines = text.split(/\r?\n/).filter(Boolean);
       const keys = [];
       lines.forEach(line=>{
@@ -352,7 +428,8 @@
         const c = document.createElement('span');
         c.className = 'chip';
         const exists = localStorage.getItem(k.key) != null;
-        c.innerHTML = `<strong>${k.key}</strong> · ${bytes(k.size)} ${exists? '· <span class="muted">(will overwrite)</span>':''}`;
+        const tag = k._source === 'rpgsave' ? '· .rpgsave' : '';
+        c.innerHTML = `<strong>${k.key}</strong> · ${bytes(k.size)} ${tag} ${exists? '· <span class="muted">(will overwrite)</span>':''}`;
         list.appendChild(c);
       });
       $('#preview').style.display = 'block';
@@ -372,9 +449,17 @@
     function applyPreview(){
       if(!preview) return;
       let written = 0;
-      preview.keys.forEach(({key,value})=>{
-        try{ localStorage.setItem(key, value); written++; }
-        catch(e){ console.warn('Failed to write key', key, e); }
+      preview.keys.forEach((item)=>{
+        let targetKey = item.key;
+        // If this came from a .rpgsave and key is a placeholder, ask the user
+        if(item._source === 'rpgsave' && (!targetKey || /PLACEHOLDER/i.test(targetKey))){
+          const guess = guessKeyFromFilename(item._filename) || guessKeyForSlot(1);
+          const answer = prompt(`Write imported .rpgsave to which localStorage key?`, guess);
+          if(!answer) return; // skip
+          targetKey = answer.trim();
+        }
+        try{ localStorage.setItem(targetKey, item.value); written++; }
+        catch(e){ console.warn('Failed to write key', targetKey, e); }
       });
       clearPreview();
       rescan();
@@ -387,7 +472,6 @@
       const rows = ALL_KEYS.map(r=>r.key);
       const selectAll = rows.some(k=>!selected.has(k));
       rows.forEach(k=>{ if(selectAll) selected.add(k); else selected.delete(k); });
-      // re-render checkboxes
       renderList();
     });
 
@@ -411,26 +495,51 @@
       const blob = makeFile(obj);
       const filename = `rpgmaker-save-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
       downloadBlob(blob, filename);
-      badge($('#exportBadge'), 'Downloaded', 'ok');
+      badge($('#exportBadge'), 'Downloaded JSON', 'ok');
     });
 
     $('#btn-copy').addEventListener('click', copyAsText);
+
+    $('#btn-download-rpgsave').addEventListener('click', exportSelectedAsRpgsave);
 
     // File import
     const drop = $('#drop');
     const fileInput = $('#file');
 
-    function handleFile(file){
+    function handleRpgsaveFile(file){
       const reader = new FileReader();
       reader.onload = ()=>{
-        try{
-          const obj = parseBackupText(String(reader.result));
-          showPreview(obj);
-        }catch(e){
-          badge($('#importBadge'), 'Could not parse file', 'bad');
-        }
+        const buf = reader.result; // ArrayBuffer
+        const u8 = new Uint8Array(buf);
+        const b64 = u8ToB64(u8);
+        // Choose default key guess, allow override later in applyPreview()
+        const guessed = guessKeyFromFilename(file.name) || 'PLACEHOLDER';
+        const obj = {
+          format: 'RPGSAVEFile',
+          version: 1,
+          exportedAt: nowIso(),
+          origin: 'file',
+          userAgent: navigator.userAgent,
+          count: 1,
+          keys: [{ key: guessed, value: b64, size: u8.length, _source:'rpgsave', _filename: file.name }]
+        };
+        showPreview(obj);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function handleTextualFile(file){
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{ const obj = parseBackupText(String(reader.result)); showPreview(obj); }
+        catch(e){ badge($('#importBadge'), 'Could not parse file', 'bad'); }
       };
       reader.readAsText(file);
+    }
+
+    function handleFile(file){
+      if(/\.rpgsave$/i.test(file.name)) handleRpgsaveFile(file);
+      else handleTextualFile(file);
     }
 
     fileInput.addEventListener('change', (e)=>{
@@ -457,8 +566,6 @@
       if(!confirm(`Write ${preview.keys.length} key(s) to localStorage? Existing keys with the same name will be overwritten.`)) return;
       applyPreview();
     });
-
-    // Initial
     rescan();
   </script>
 </body>
