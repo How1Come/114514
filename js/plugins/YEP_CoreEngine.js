@@ -24,8 +24,8 @@ Yanfly.Core.version = 1.28;
  * @type number
  * @min 0
  * @desc Adjusts the width of the screen.
- * Default: 816
- * @default 816
+ * Default: 1104
+ * @default 1104
  *
  * @param Screen Height
  * @parent ---Screen---
