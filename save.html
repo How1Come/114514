@@ -6,12 +6,12 @@
   <title>RPG Maker Save Export / Import (MV & MZ, HTML5 + .rpgsave)</title>
   <style>
     :root {
-      --bg: #0b0f14;         /* deep slate */
-      --panel: #111825;      /* panel surface */
-      --muted: #9fb0c0;      /* text secondary */
-      --text: #e6eef7;       /* text primary */
-      --brand: #4cc3ff;      /* accent */
-      --brand-600:#2aa7f0;   /* accent hover */
+      --bg: #0b0f14;
+      --panel: #111825;
+      --muted: #9fb0c0;
+      --text: #e6eef7;
+      --brand: #4cc3ff;
+      --brand-600:#2aa7f0;
       --ok: #3ddc84;
       --warn: #ffb454;
       --bad: #ff6b6b;
@@ -42,11 +42,9 @@
     .btn.good{border-color:#2e6b52;background:linear-gradient(180deg,#144335,#0d2f25)}
     .btn.bad{border-color:#6b2e2e;background:linear-gradient(180deg,#431414,#2f0d0d)}
     .btn.link{background:transparent;border-color:transparent;padding:0;color:var(--brand)}
-
     .klist{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}
     .chip{border:1px solid var(--chip-brd);background:linear-gradient(180deg,#0e1725,#0b1320);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
     .chip strong{color:var(--text)}
-
     .muted{color:var(--muted)}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
     input[type="file"]{display:none}
@@ -82,7 +80,6 @@
         <button id="btn-export" class="btn primary" title="Export detected save keys">Prepare Export</button>
       </div>
     </header>
-
     <div class="grid">
       <!-- LEFT: Detected keys & actions -->
       <section class="card">
@@ -154,419 +151,169 @@
         <div class="spacer"></div>
         <span id="exportBadge" class="badge">Nothing selected</span>
       </div>
-      <details style="margin-top:10px">
-        <summary class="help">What counts as a “save key”?</summary>
-        <div class="help" style="margin-top:8px">
-          This tool scans <span class="mono">localStorage</span> for common RPG Maker MV/MZ keys (e.g. <span class="mono">RPG File1</span>, <span class="mono">RPG Global</span>, <span class="mono">RPGMZ Save1</span>, etc.). Different games sometimes add prefixes or store config separately. You can still export anything by checking it in the list.
-        </div>
-      </details>
     </section>
 
     <p class="foot">Tip: Run this on the same site/origin where the game runs so the save keys appear. All operations happen locally in your browser.</p>
   </div>
 
+  <!-- EMBEDDED LZString LIBRARY -->
   <script>
-    // --- Utilities ----------------------------------------------------------
-    const $ = (sel) => document.querySelector(sel);
-    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+  /* LZ-String (embedded, MIT License)
+     https://github.com/pieroxy/lz-string */
+  var LZString=function(){function o(o,r){if(!t[o]){t[o]={};for(var n=0;n<o.length;n++)t[o][o.charAt(n)]=n}return t[o][r]}var r=String.fromCharCode,n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",e="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",t={},i={compressToBase64:function(o){if(null==o)return"";var r=i._compress(o,6,function(o){return n.charAt(o)});switch(r.length%4){default:case 0:return r;case 1:return r+"===";case 2:return r+"==";case 3:return r+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(e){return o(n,r.charAt(e))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(o){return null==o?"":""==o?null:i._decompress(o.length,16384,function(r){return o.charCodeAt(r)-32})},compressToUint8Array:function(o){for(var r=i.compress(o),n=new Uint8Array(2*r.length),e=0,t=r.length;t>e;e++){var s=r.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null===o||void 0===o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;t>e;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(o){return null==o?"":i._compress(o,6,function(o){return e.charAt(o)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(n){return o(e,r.charAt(n))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(o,r,n){if(null==o)return"";var e,t,i={},s={},p="",u="",c="",a=2,f=3,l=2,h=[],d=0,v=0;for(t=0;t<o.length;t+=1)if(p=o.charAt(t),Object.prototype.hasOwnProperty.call(i,p)||(i[p]=f++,s[p]=!0),u=c+p,Object.prototype.hasOwnProperty.call(i,u))c=u;else{if(Object.prototype.hasOwnProperty.call(s,c)){if(c.charCodeAt(0)<256){for(e=0;e<l;e++)d<<=1,v==r-1?(v=0,h.push(n(d)),d=0):v++;for(t=0;t<8;t++)d=d<<1|c.charCodeAt(0)&1,v==r-1?(v=0,h.push(n(d)),d=0):v++,c=c.charCodeAt(0)>>1}else{for(e=0;e<l;e++)d=d<<1|1,v==r-1?(v=0,h.push(n(d)),d=0):v++;for(t=0;t<16;t++)d=d<<1|c.charCodeAt(0)&1,v==r-1?(v=0,h.push(n(d)),d=0):v++,c=c.charCodeAt(0)>>1}f<=a?a++:0,s[c]=!1}else for(t=0;t<l;t++)d=d<<1|i[c]&1,v==r-1?(v=0,h.push(n(d)),d=0):v++,i[c]=i[c]>>1;--a,0==a&&(a=Math.pow(2,l),l++),i[u]=f++,c=String(p)}if(""!==c){if(Object.prototype.hasOwnProperty.call(s,c)){if(c.charCodeAt(0)<256){for(e=0;e<l;e++)d<<=1,v==r-1?(v=0,h.push(n(d)),d=0):v++;for(t=0;t<8;t++)d=d<<1|c.charCodeAt(0)&1,v==r-1?(v=0,h.push(n(d)),d=0):v++,c=c.charCodeAt(0)>>1}else{for(e=0;e<l;e++)d=d<<1|1,v==r-1?(v=0,h.push(n(d)),d=0):v++;for(t=0;t<16;t++)d=d<<1|c.charCodeAt(0)&1,v==r-1?(v=0,h.push(n(d)),d=0):v++,c=c.charCodeAt(0)>>1}f<=a?a++:0,s[c]=!1}else for(t=0;t<l;t++)d=d<<1|i[c]&1,v==r-1?(v=0,h.push(n(d)),d=0):v++,i[c]=i[c]>>1}for(;;){if(d<<=1,v==r-1){h.push(n(d));break}v++}return h.join("")},decompress:function(o){return null==o?"":""==o?null:i._decompress(o.length,32768,function(r){return o.charCodeAt(r)})},_decompress:function(o,n,e){var t,i,s,p,u,c,a,f,l=[],h=4,d=4,v=3,g="",y=[],m={val:e(0),position:n,index:1};for(i=0;3>i;i+=1)l[i]=i;for(p=0,u=Math.pow(2,2),c=1;c!=u;)a=m.val&m.position,m.position>>=1,0==m.position&&(m.position=n,m.val=e(m.index++)),p|=(a>0?1:0)*c,c<<=1;switch(t=p){case 0:for(p=0,u=Math.pow(2,8),c=1;c!=u;)a=m.val&m.position,m.position>>=1,0==m.position&&(m.position=n,m.val=e(m.index++)),p|=(a>0?1:0)*c,c<<=1;l[3]=r(p),t=3;break;case 1:for(p=0,u=Math.pow(2,16),c=1;c!=u;)a=m.val&m.position,m.position>>=1,0==m.position&&(m.position=n,m.val=e(m.index++)),p|=(a>0?1:0)*c,c<<=1;l[3]=r(p),t=3;break;case 2:return""}for(f=g=l[t],y.push(l[t]);;){if(m.index>o)return"";for(p=0,u=Math.pow(2,v),c=1;c!=u;)a=m.val&m.position,m.position>>=1,0==m.position&&(m.position=n,m.val=e(m.index++)),p|=(a>0?1:0)*c,c<<=1;switch(s=p){case 0:for(p=0,u=Math.pow(2,8),c=1;c!=u;)a=m.val&m.position,m.position>>=1,0==m.position&&(m.position=n,m.val=e(m.index++)),p|=(a>0?1:0)*c,c<<=1;l[d++]=r(p),s=d-1,h--;break;case 1:for(p=0,u=Math.pow(2,16),c=1;c!=u;)a=m.val&m.position,m.position>>=1,0==m.position&&(m.position=n,m.val=e(m.index++)),p|=(a>0?1:0)*c,c<<=1;l[d++]=r(p),s=d-1,h--;break;case 2:return y.join("")}if(0==h&&(h=Math.pow(2,v),v++),l[s])f=l[s];else{if(s!==d)return null;f=g+g.charAt(0)}y.push(f),l[d++]=g+f.charAt(0),h--,g=f,0==h&&(h=Math.pow(2,v),v++)}}};return i}();
+  </script>
+  <script>
+  // ==== Utility functions ====
+  const $ = sel => document.querySelector(sel);
+  function bytes(n){return n<1024?n+" B":(n/1024).toFixed(1)+" KB";}
+  function badge(el,text,type){el.textContent=text;el.className="badge"+(type?" "+type:"");}
+  function isProbablyBase64(str){try{atob(str.slice(0,20));return true;}catch(e){return false;}}
+  function downloadBlob(blob,filename){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;a.click();}
+  function keyToSlot(key){let m=key.match(/RPG\s*File(\d+)/i);if(m)return parseInt(m[1]);return null;}
+  function filenameForKey(key){let s=keyToSlot(key);if(s)return `file${s}.rpgsave`;if(/global/i.test(key))return "global.rpgsave";return key.replace(/\W+/g,'_')+".rpgsave";}
 
-    function bytes(n){
-      if(n < 1024) return n + ' B';
-      if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
-      return (n/1024/1024).toFixed(2) + ' MB';
+  // ==== State ====
+  let ALL_KEYS=[], selected=new Set(), previewData=null;
+
+  // ==== Rendering ====
+  function renderKeys(){
+    const tb=$("#keyTable"); tb.innerHTML="";
+    const chips=$("#keyChips"); chips.innerHTML="";
+    ALL_KEYS.forEach(r=>{
+      let tr=document.createElement("tr");
+      tr.innerHTML=`<td>${r.key}</td><td>${bytes(r.size)}</td><td>${r.type}</td>`;
+      let td=document.createElement("td");
+      let cb=document.createElement("input");
+      cb.type="checkbox"; cb.checked=/RPG/i.test(r.key);
+      if(cb.checked)selected.add(r.key);
+      cb.onchange=()=>{if(cb.checked)selected.add(r.key);else selected.delete(r.key);updateButtons();};
+      td.appendChild(cb); tr.appendChild(td); tb.appendChild(tr);
+
+      let chip=document.createElement("div");
+      chip.className="chip"; chip.innerHTML=`<strong>${r.key}</strong> • ${bytes(r.size)}`;
+      chips.appendChild(chip);
+    });
+    updateButtons();
+  }
+  function updateButtons(){
+    let c=selected.size;
+    $("#btn-download").disabled=!c;
+    $("#btn-copy").disabled=!c;
+    $("#btn-download-rpgsave").disabled=!c;
+    badge($("#exportBadge"),c?c+" selected":"Nothing selected",c?"ok":"bad");
+  }
+
+  // ==== Scan ====
+  function rescan(){
+    ALL_KEYS=[];
+    for(let i=0;i<localStorage.length;i++){
+      let k=localStorage.key(i),v=localStorage.getItem(k);
+      ALL_KEYS.push({key:k,value:v,size:v.length,type:isProbablyBase64(v)?"Base64":"Text"});
     }
+    selected.clear(); renderKeys();
+    badge($("#scanBadge"),ALL_KEYS.length+" keys","ok");
+  }
 
-    function badge(el, text, type){
-      el.textContent = text;
-      el.className = 'badge' + (type? ' ' + type : '');
+  // ==== Export ====
+  function exportJson(){
+    let obj={}; ALL_KEYS.filter(r=>selected.has(r.key)).forEach(r=>obj[r.key]=r.value);
+    downloadBlob(new Blob([JSON.stringify(obj)],{type:"application/json"}),"saves.json");
+  }
+  function copyJson(){
+    let obj={}; ALL_KEYS.filter(r=>selected.has(r.key)).forEach(r=>obj[r.key]=r.value);
+    navigator.clipboard.writeText(JSON.stringify(obj));
+  }
+  function exportRpgsave(){
+    const rows=ALL_KEYS.filter(r=>selected.has(r.key));
+    rows.forEach(r=>{
+      let json=isProbablyBase64(r.value)?LZString.decompressFromBase64(r.value):r.value;
+      const comp=LZString.compressToBase64(json);
+      downloadBlob(new Blob([comp],{type:"application/octet-stream"}),filenameForKey(r.key));
+    });
+    badge($("#exportBadge"),"Exported .rpgsave","ok");
+  }
+
+  // ==== Import / Preview ====
+  function previewFromObject(obj){
+    previewData=obj;
+    const pl=$("#previewList"); pl.innerHTML="";
+    for(const k in obj){
+      let chip=document.createElement("div"); chip.className="chip";
+      chip.innerHTML=`<strong>${k}</strong> • ${bytes(obj[k].length)}`;
+      pl.appendChild(chip);
     }
+    $("#preview").style.display="block";
+    $("#btn-apply").disabled=false;
+    $("#btn-clear-preview").disabled=false;
+    badge($("#importBadge"),Object.keys(obj).length+" ready","ok");
+  }
+  function applyPreview(){
+    if(!previewData)return;
+    for(const k in previewData)localStorage.setItem(k,previewData[k]);
+    rescan(); clearPreview();
+    badge($("#importBadge"),"Applied","ok");
+  }
+  function clearPreview(){
+    previewData=null;
+    $("#preview").style.display="none";
+    $("#btn-apply").disabled=true;
+    $("#btn-clear-preview").disabled=true;
+    badge($("#importBadge"),"No file","bad");
+  }
 
-    function nowIso(){ return new Date().toISOString(); }
-
-    function isProbablyBase64(str){
-      if(typeof str !== 'string') return false;
-      const s = str.trim();
-      if(!/^[A-Za-z0-9+/=\r\n]+$/.test(s)) return false;
-      if(s.length % 4 !== 0) return false;
-      try{ atob(s.slice(0,100)); return true; }catch(e){ return false; }
-    }
-
-    function b64ToU8(b64){
-      const bin = atob(b64.replace(/\s+/g,''));
-      const len = bin.length;
-      const u8 = new Uint8Array(len);
-      for(let i=0;i<len;i++) u8[i] = bin.charCodeAt(i);
-      return u8;
-    }
-
-    function u8ToB64(u8){
-      let s = '';
-      const chunk = 0x8000;
-      for(let i=0;i<u8.length;i+=chunk){
-        s += String.fromCharCode.apply(null, u8.subarray(i, i+chunk));
+  // ==== File input ====
+  $("#file").onchange=e=>{
+    const f=e.target.files[0]; if(!f)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      let txt=ev.target.result;
+      if(f.name.endsWith(".rpgsave")){
+        // .rpgsave is Base64 compressed
+        previewFromObject({[f.name.replace(/\.rpgsave$/,"")]:txt});
+      }else{
+        try{previewFromObject(JSON.parse(txt));}
+        catch{alert("Invalid JSON");}
       }
-      return btoa(s);
-    }
+    };
+    reader.readAsText(f);
+  };
 
-    const enc = new TextEncoder();
-    const dec = new TextDecoder();
+  // ==== Drag-drop ====
+  const drop=$("#drop");
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add("drag");};
+  drop.ondragleave=()=>drop.classList.remove("drag");
+  drop.ondrop=e=>{
+    e.preventDefault();drop.classList.remove("drag");
+    const f=e.dataTransfer.files[0]; if(f)$("#file").files=e.dataTransfer.files,$("#file").onchange({target:{files:[f]}});
+  };
 
-    function looksLikeRpgMakerKey(key, value){
-      // Heuristics covering MV & MZ conventions; not exhaustive
-      const k = key.toLowerCase();
-      if(/^(rpg( ?mv| ?mz)?|save|global)/.test(k)) return true;
-      if(/rpgm[vz]\s*save/.test(k)) return true; // e.g. "RPGMZ Save1"
-      if(/rpg file\d+/.test(k)) return true;     // MV "RPG File1"
-      if(/rpg global/.test(k)) return true;      // MV "RPG Global"
-      // Value hint: JSON or Base64-ish
-      try{
-        if(value && value.length > 2){
-          if((value[0]==='{' && value.at(-1)==='}') || (value[0]==='[' && value.at(-1)===']')) return true;
-          if(isProbablyBase64(value) && value.length > 64) return true;
-        }
-      }catch(e){}
-      return false;
-    }
+  // ==== Paste box ====
+  $("#btn-parse-paste").onclick=()=>{
+    let txt=$("#paste").value.trim();
+    if(!txt)return;
+    try{previewFromObject(JSON.parse(txt));}
+    catch{previewFromObject({"pasted":txt});}
+  };
 
-    function gatherKeys(){
-      const keys = [];
-      for(let i=0;i<localStorage.length;i++){
-        const key = localStorage.key(i);
-        let value;
-        try{ value = localStorage.getItem(key) ?? ''; }catch(e){ value = ''; }
-        const size = new Blob([value]).size;
-        keys.push({ key, value, size, isSave: looksLikeRpgMakerKey(key, value) });
-      }
-      keys.sort((a,b)=> (b.isSave - a.isSave) || a.key.localeCompare(b.key));
-      return keys;
-    }
-
-    function makeFile(dataObj){
-      const json = JSON.stringify(dataObj, null, 2);
-      return new Blob([json], {type:'application/json'});
-    }
-
-    function downloadBlob(blob, filename){
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
-    }
-
-    function keyToSlot(key){
-      let m = key.match(/RPG\s*File(\d+)/i);
-      if(m) return { slot: Number(m[1]), type: 'MV' };
-      m = key.match(/RPGMZ\s*Save(\d+)/i);
-      if(m) return { slot: Number(m[1]), type: 'MZ' };
-      return null;
-    }
-
-    function envPreferredType(){
-      const mv = ALL_KEYS.some(k=>/RPG\s*File\d+/i.test(k.key));
-      const mz = ALL_KEYS.some(k=>/RPGMZ\s*Save\d+/i.test(k.key));
-      if(mz && !mv) return 'MZ';
-      if(mv && !mz) return 'MV';
-      return 'MV'; // default
-    }
-
-    function guessKeyForSlot(slot){
-      return envPreferredType()==='MZ' ? `RPGMZ Save${slot}` : `RPG File${slot}`;
-    }
-
-    function guessKeyFromFilename(name){
-      let m = name.match(/(?:file|save|slot)(\d+)\.rpgsave$/i);
-      if(m) return guessKeyForSlot(Number(m[1]));
-      return null;
-    }
-
-    // --- State --------------------------------------------------------------
-    let ALL_KEYS = [];
-    let selected = new Set();
-    let preview = null; // parsed import object
-
-    // --- Renderers ----------------------------------------------------------
-    function renderList(){
-      const tbody = $('#keyTable');
-      tbody.innerHTML = '';
-      const chips = $('#keyChips');
-      chips.innerHTML = '';
-
-      ALL_KEYS.forEach((row)=>{
-        if(row.isSave){
-          const c = document.createElement('span');
-          c.className = 'chip';
-          c.innerHTML = `<strong>${row.key}</strong> · ${bytes(row.size)}`;
-          chips.appendChild(c);
-        }
-        const tr = document.createElement('tr');
-        const tdK = document.createElement('td');
-        const tdS = document.createElement('td');
-        const tdT = document.createElement('td');
-        const tdC = document.createElement('td');
-
-        tdK.textContent = row.key;
-        tdS.textContent = bytes(row.size);
-        tdT.innerHTML = row.isSave ? '<span class="badge ok">Save‑like</span>' : '<span class="badge">Other</span>';
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.checked = row.isSave;
-        if(cb.checked) selected.add(row.key);
-        cb.addEventListener('change', ()=>{
-          if(cb.checked) selected.add(row.key); else selected.delete(row.key);
-          updateExportButtons();
-        });
-        tdC.appendChild(cb);
-
-        [tdK,tdS,tdT,tdC].forEach(td=>{ td.className=''; });
-        tr.appendChild(tdK); tr.appendChild(tdS); tr.appendChild(tdT); tr.appendChild(tdC);
-        tbody.appendChild(tr);
-      });
-
-      updateExportButtons();
-    }
-
-    function updateExportButtons(){
-      const count = selected.size;
-      const total = ALL_KEYS.filter(k=>selected.has(k.key)).reduce((a,b)=>a+b.size,0);
-      $('#btn-download').disabled = count===0;
-      $('#btn-copy').disabled = count===0;
-      $('#btn-download-rpgsave').disabled = count===0;
-      badge($('#exportBadge'), count===0 ? 'Nothing selected' : `${count} key${count>1?'s':''} · ${bytes(total)}`, count? 'ok' : '');
-    }
-
-    function rescan(){
-      badge($('#scanBadge'), 'Scanning…', 'warn');
-      selected.clear();
-      ALL_KEYS = gatherKeys();
-      renderList();
-      const suspected = ALL_KEYS.filter(k=>k.isSave).length;
-      badge($('#scanBadge'), suspected ? `Found ${suspected} save‑like key${suspected>1?'s':''}` : 'No obvious save keys', suspected ? 'ok' : 'bad');
-    }
-
-    // --- Export (JSON) ------------------------------------------------------
-    function buildExportObject(){
-      const keys = ALL_KEYS.filter(row=>selected.has(row.key)).map(({key,value,size})=>({key,value,size}));
-      return {
-        format: 'RPGMakerWebSavePack',
-        version: 2,
-        exportedAt: nowIso(),
-        origin: location.origin,
-        userAgent: navigator.userAgent,
-        count: keys.length,
-        keys
-      };
-    }
-
-    function copyAsText(){
-      const obj = buildExportObject();
-      const text = JSON.stringify(obj);
-      navigator.clipboard.writeText(text).then(()=>{
-        badge($('#exportBadge'), 'Copied to clipboard', 'ok');
-      }).catch(()=>{
-        const ta = document.createElement('textarea');
-        ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
-        badge($('#exportBadge'), 'Copied (fallback)', 'ok');
-      });
-    }
-
-    // --- Export (.rpgsave) --------------------------------------------------
-    function filenameForKey(key){
-      const info = keyToSlot(key);
-      if(info && Number.isFinite(info.slot)) return `file${info.slot}.rpgsave`;
-      return key.replace(/\W+/g,'_') + '.rpgsave';
-    }
-
-    function valueToRpgsaveBytes(value){
-      // If looks like base64 -> decode to bytes; otherwise treat as UTF-8 text
-      if(isProbablyBase64(value)) return b64ToU8(value);
-      return enc.encode(String(value));
-    }
-
-    function exportSelectedAsRpgsave(){
-      const rows = ALL_KEYS.filter(r=>selected.has(r.key));
-      if(!rows.length) return;
-      let exported = 0;
-      rows.forEach((row, i)=>{
-        try{
-          const u8 = valueToRpgsaveBytes(row.value);
-          const blob = new Blob([u8], {type:'application/octet-stream'});
-          const name = filenameForKey(row.key);
-          setTimeout(()=> downloadBlob(blob, name), i*120);
-          exported++;
-        }catch(e){ console.warn('Failed to export', row.key, e); }
-      });
-      badge($('#exportBadge'), `Exported ${exported} .rpgsave`, exported? 'ok':'bad');
-    }
-
-    // --- Import -------------------------------------------------------------
-    function parseBackupText(text){
-      try{
-        const obj = JSON.parse(text);
-        if(obj && obj.keys && Array.isArray(obj.keys)) return obj;
-      }catch(e){ /* not JSON */ }
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const keys = [];
-      lines.forEach(line=>{
-        const m = line.match(/^([^=:\s]+)[=:\s](.+)$/);
-        if(m){ keys.push({key:m[1], value:m[2], size:new Blob([m[2]]).size}); }
-      });
-      if(keys.length){
-        return { format:'LooseText', version:1, exportedAt: nowIso(), origin:'unknown', userAgent:'', count: keys.length, keys };
-      }
-      throw new Error('Unrecognized backup text');
-    }
-
-    function showPreview(obj){
-      preview = obj;
-      const list = $('#previewList');
-      list.innerHTML = '';
-      obj.keys.forEach(k=>{
-        const c = document.createElement('span');
-        c.className = 'chip';
-        const exists = localStorage.getItem(k.key) != null;
-        const tag = k._source === 'rpgsave' ? '· .rpgsave' : '';
-        c.innerHTML = `<strong>${k.key}</strong> · ${bytes(k.size)} ${tag} ${exists? '· <span class="muted">(will overwrite)</span>':''}`;
-        list.appendChild(c);
-      });
-      $('#preview').style.display = 'block';
-      $('#btn-apply').disabled = false;
-      $('#btn-clear-preview').disabled = false;
-      badge($('#importBadge'), `Ready: ${obj.keys.length} key${obj.keys.length>1?'s':''}`, 'ok');
-    }
-
-    function clearPreview(){
-      preview = null;
-      $('#preview').style.display = 'none';
-      $('#btn-apply').disabled = true;
-      $('#btn-clear-preview').disabled = true;
-      badge($('#importBadge'), 'No file', '');
-    }
-
-    function applyPreview(){
-      if(!preview) return;
-      let written = 0;
-      preview.keys.forEach((item)=>{
-        let targetKey = item.key;
-        // If this came from a .rpgsave and key is a placeholder, ask the user
-        if(item._source === 'rpgsave' && (!targetKey || /PLACEHOLDER/i.test(targetKey))){
-          const guess = guessKeyFromFilename(item._filename) || guessKeyForSlot(1);
-          const answer = prompt(`Write imported .rpgsave to which localStorage key?`, guess);
-          if(!answer) return; // skip
-          targetKey = answer.trim();
-        }
-        try{ localStorage.setItem(targetKey, item.value); written++; }
-        catch(e){ console.warn('Failed to write key', targetKey, e); }
-      });
-      clearPreview();
+  // ==== Button hookups ====
+  $("#btn-scan").onclick=rescan;
+  $("#btn-download").onclick=exportJson;
+  $("#btn-copy").onclick=copyJson;
+  $("#btn-download-rpgsave").onclick=exportRpgsave;
+  $("#btn-apply").onclick=applyPreview;
+  $("#btn-clear-preview").onclick=clearPreview;
+  $("#btn-toggle-all").onclick=()=>{
+    if(selected.size<ALL_KEYS.length)ALL_KEYS.forEach(r=>selected.add(r.key));
+    else selected.clear(); renderKeys();
+  };
+  $("#btn-delete-selected").onclick=()=>{
+    if(confirm("Delete selected keys from localStorage?")){
+      ALL_KEYS.filter(r=>selected.has(r.key)).forEach(r=>localStorage.removeItem(r.key));
       rescan();
-      badge($('#scanBadge'), `Wrote ${written} key${written>1?'s':''}`, 'ok');
     }
+  };
 
-    // --- Event wiring -------------------------------------------------------
-    $('#btn-scan').addEventListener('click', rescan);
-    $('#btn-toggle-all').addEventListener('click', ()=>{
-      const rows = ALL_KEYS.map(r=>r.key);
-      const selectAll = rows.some(k=>!selected.has(k));
-      rows.forEach(k=>{ if(selectAll) selected.add(k); else selected.delete(k); });
-      renderList();
-    });
-
-    $('#btn-delete-selected').addEventListener('click', ()=>{
-      if(!selected.size) return;
-      if(!confirm(`Delete ${selected.size} selected key(s) from localStorage? This cannot be undone.`)) return;
-      let del=0; selected.forEach(k=>{ try{ localStorage.removeItem(k); del++; }catch(e){} });
-      selected.clear();
-      rescan();
-      badge($('#scanBadge'), `Deleted ${del} key${del>1?'s':''}`, 'bad');
-    });
-
-    $('#btn-export').addEventListener('click', ()=>{
-      const obj = buildExportObject();
-      const info = `${obj.count} key${obj.count>1?'s':''}`;
-      badge($('#exportBadge'), `Ready: ${info}`, 'ok');
-    });
-
-    $('#btn-download').addEventListener('click', ()=>{
-      const obj = buildExportObject();
-      const blob = makeFile(obj);
-      const filename = `rpgmaker-save-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
-      downloadBlob(blob, filename);
-      badge($('#exportBadge'), 'Downloaded JSON', 'ok');
-    });
-
-    $('#btn-copy').addEventListener('click', copyAsText);
-
-    $('#btn-download-rpgsave').addEventListener('click', exportSelectedAsRpgsave);
-
-    // File import
-    const drop = $('#drop');
-    const fileInput = $('#file');
-
-    function handleRpgsaveFile(file){
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        const buf = reader.result; // ArrayBuffer
-        const u8 = new Uint8Array(buf);
-        const b64 = u8ToB64(u8);
-        // Choose default key guess, allow override later in applyPreview()
-        const guessed = guessKeyFromFilename(file.name) || 'PLACEHOLDER';
-        const obj = {
-          format: 'RPGSAVEFile',
-          version: 1,
-          exportedAt: nowIso(),
-          origin: 'file',
-          userAgent: navigator.userAgent,
-          count: 1,
-          keys: [{ key: guessed, value: b64, size: u8.length, _source:'rpgsave', _filename: file.name }]
-        };
-        showPreview(obj);
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    function handleTextualFile(file){
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        try{ const obj = parseBackupText(String(reader.result)); showPreview(obj); }
-        catch(e){ badge($('#importBadge'), 'Could not parse file', 'bad'); }
-      };
-      reader.readAsText(file);
-    }
-
-    function handleFile(file){
-      if(/\.rpgsave$/i.test(file.name)) handleRpgsaveFile(file);
-      else handleTextualFile(file);
-    }
-
-    fileInput.addEventListener('change', (e)=>{
-      const file = e.target.files?.[0];
-      if(file){ handleFile(file); }
-    });
-
-    ;['dragenter','dragover'].forEach(evt=> drop.addEventListener(evt, (e)=>{ e.preventDefault(); drop.classList.add('drag'); }));
-    ;['dragleave','drop'].forEach(evt=> drop.addEventListener(evt, (e)=>{ e.preventDefault(); drop.classList.remove('drag'); }));
-    drop.addEventListener('drop', (e)=>{
-      const f = e.dataTransfer.files?.[0]; if(f) handleFile(f);
-    });
-
-    $('#btn-parse-paste').addEventListener('click', ()=>{
-      const text = $('#paste').value.trim();
-      if(!text) { badge($('#importBadge'),'Nothing pasted',''); return; }
-      try{ showPreview(parseBackupText(text)); }
-      catch(e){ badge($('#importBadge'),'Could not parse text','bad'); }
-    });
-
-    $('#btn-clear-preview').addEventListener('click', clearPreview);
-    $('#btn-apply').addEventListener('click', ()=>{
-      if(!preview) return;
-      if(!confirm(`Write ${preview.keys.length} key(s) to localStorage? Existing keys with the same name will be overwritten.`)) return;
-      applyPreview();
-    });
-    rescan();
+  rescan(); // initial
   </script>
 </body>
 </html>
