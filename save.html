@@ -224,14 +224,24 @@
     navigator.clipboard.writeText(JSON.stringify(obj));
   }
   function exportRpgsave(){
-    const rows=ALL_KEYS.filter(r=>selected.has(r.key));
-    rows.forEach(r=>{
-      let json=isProbablyBase64(r.value)?LZString.decompressFromBase64(r.value):r.value;
-      const comp=LZString.compressToBase64(json);
-      downloadBlob(new Blob([comp],{type:"application/octet-stream"}),filenameForKey(r.key));
+    const rows = ALL_KEYS.filter(r => selected.has(r.key));
+    if (!rows.length) return;
+    rows.forEach(r => {
+      let raw = r.value;
+      let out;
+      if (isProbablyBase64(raw)) {
+        // already compressed save (as in EXE)
+        out = raw;
+      } else {
+        // looks like JSON, compress it
+        out = LZString.compressToBase64(raw);
+      }
+      const blob = new Blob([out], {type:"application/octet-stream"});
+      downloadBlob(blob, filenameForKey(r.key));
     });
-    badge($("#exportBadge"),"Exported .rpgsave","ok");
+    badge($("#exportBadge"), "Exported .rpgsave", "ok");
   }
+
 
   // ==== Import / Preview ====
   function previewFromObject(obj){
