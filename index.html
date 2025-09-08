@@ -2,58 +2,19 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <!-- Modern mobile web app capable -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- Legacy iOS (still useful for older devices) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="viewport" content="user-scalable=no">
+  <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1">
   <link rel="icon" href="icon/icon.png" type="image/png">
   <link rel="apple-touch-icon" href="icon/icon.png">
   <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
   <title>冬日狂想曲 v1.02</title>
-  <style>
-    /* Virtual Keyboard styles */
-    #vk-toggle {
-      position: fixed;
-      bottom: 12px;
-      right: 12px;
-      z-index: 9999;
-      background: rgba(0,0,0,0.6);
-      border: 1px solid #4cc3ff;
-      border-radius: 10px;
-      padding: 6px 12px;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-      user-select: none;
-    }
-    #virtual-keyboard {
-      display: none;
-      position: fixed;
-      bottom: 60px;
-      right: 12px;
-      z-index: 9999;
-      background: rgba(0,0,0,0.85);
-      border: 1px solid #4cc3ff;
-      border-radius: 12px;
-      padding: 8px;
-      backdrop-filter: blur(4px);
-    }
-    #virtual-keyboard button {
-      margin: 4px;
-      padding: 8px 12px;
-      font-size: 14px;
-      border: none;
-      border-radius: 8px;
-      background: #1a2433;
-      color: #fff;
-      min-width: 48px;
-    }
-    #virtual-keyboard button:active {
-      background: #4cc3ff;
-    }
-  </style>
 </head>
 <body style="background-color: black">
-  <!-- Game engine scripts -->
+  <!-- RPG Maker Engine -->
   <script type="text/javascript" src="js/libs/pixi.js"></script>
   <script type="text/javascript" src="js/libs/pixi-tilemap.js"></script>
   <script type="text/javascript" src="js/libs/pixi-picture.js"></script>
@@ -69,57 +30,75 @@
   <script type="text/javascript" src="js/plugins.js"></script>
   <script type="text/javascript" src="js/main.js"></script>
 
-  <!-- Virtual Keyboard toggle + panel -->
-  <div id="vk-toggle">⌨️</div>
+  <!-- ===== Virtual Keyboard ===== -->
+  <style>
+    #vk-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: none;
+      background: #0a5486;
+      color: #fff;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    #virtual-keyboard {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20,20,20,0.95);
+      padding: 10px;
+      border-radius: 10px;
+      display: none;
+      z-index: 9999;
+    }
+    #virtual-keyboard button {
+      margin: 4px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #153045;
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+    }
+  </style>
+
+  <button id="vk-toggle">⌨️</button>
   <div id="virtual-keyboard">
-    <button data-key="Escape">Esc</button>
-    <button data-key="Enter">Enter</button>
+    <button data-key="Escape">ESC</button>
+    <button data-key="Enter">ENTER</button>
+    <button data-key=" ">SPACE</button>
+    <br>
     <button data-key="ArrowUp">↑</button>
-    <button data-key="ArrowDown">↓</button>
+    <br>
     <button data-key="ArrowLeft">←</button>
+    <button data-key="ArrowDown">↓</button>
     <button data-key="ArrowRight">→</button>
-    <button data-key="Space">Space</button>
   </div>
 
   <script>
     const vkToggle = document.getElementById("vk-toggle");
-    const vkPanel = document.getElementById("virtual-keyboard");
+    const vk = document.getElementById("virtual-keyboard");
 
     vkToggle.onclick = () => {
-      vkPanel.style.display = (vkPanel.style.display === "none" ? "block" : "none");
+      vk.style.display = vk.style.display === "none" ? "block" : "none";
     };
 
-    const keyMap = {
-      "Escape": 27,
-      "Enter": 13,
-      "Space": 32,
-      "ArrowUp": 38,
-      "ArrowDown": 40,
-      "ArrowLeft": 37,
-      "ArrowRight": 39
-    };
+    vk.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.key;
 
-    function fireKeyEvent(type, keyName) {
-      const code = keyMap[keyName];
-      if (!code) return;
-
-      const event = new Event(type, { bubbles: true, cancelable: true });
-
-      Object.defineProperty(event, "keyCode", { get: () => code });
-      Object.defineProperty(event, "which",   { get: () => code });
-      Object.defineProperty(event, "code",    { get: () => keyName });
-      Object.defineProperty(event, "key",     { get: () => (keyName === "Space" ? " " : keyName) });
-
-      window.dispatchEvent(event);
-    }
-
-    function simulateKey(keyName) {
-      fireKeyEvent("keydown", keyName);
-      setTimeout(() => fireKeyEvent("keyup", keyName), 80);
-    }
-
-    document.querySelectorAll("#virtual-keyboard button").forEach(btn => {
-      btn.onclick = () => simulateKey(btn.dataset.key);
+        // Send real key events so RPG Maker reacts
+        document.dispatchEvent(new KeyboardEvent("keydown", { key }));
+        setTimeout(() => {
+          document.dispatchEvent(new KeyboardEvent("keyup", { key }));
+        }, 100);
+      });
     });
   </script>
 </body>
