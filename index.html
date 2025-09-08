@@ -27,107 +27,95 @@
         <script type="text/javascript" src="js/main.js"></script>
 
         <style>
-  #vk-toggle {
-    position: fixed;
-    bottom: 12px;
-    right: 12px;
-    z-index: 9999;
-    background: rgba(0,0,0,0.6);
-    border: 1px solid #4cc3ff;
-    border-radius: 10px;
-    padding: 6px 12px;
-    color: #fff;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  #virtual-keyboard {
-    display: none;
-    position: fixed;
-    bottom: 60px;
-    right: 12px;
-    z-index: 9999;
-    background: rgba(0,0,0,0.8);
-    border: 1px solid #4cc3ff;
-    border-radius: 12px;
-    padding: 8px;
-    backdrop-filter: blur(4px);
-  }
-  #virtual-keyboard button {
-    margin: 4px;
-    padding: 8px 12px;
-    font-size: 14px;
-    border: none;
-    border-radius: 8px;
-    background: #1a2433;
-    color: #fff;
-  }
-  #virtual-keyboard button:active {
-    background: #4cc3ff;
-  }
-</style>
+          #vk-toggle {
+          position: fixed;
+          bottom: 12px;
+          right: 12px;
+          z-index: 9999;
+          background: rgba(0,0,0,0.6);
+          border: 1px solid #4cc3ff;
+          border-radius: 10px;
+          padding: 6px 12px;
+          color: #fff;
+          font-size: 14px;
+          cursor: pointer;
+        }
+        #virtual-keyboard {
+          display: none;
+          position: fixed;
+          bottom: 60px;
+          right: 12px;
+          z-index: 9999;
+          background: rgba(0,0,0,0.8);
+          border: 1px solid #4cc3ff;
+          border-radius: 12px;
+          padding: 8px;
+          backdrop-filter: blur(4px);
+        }
+        #virtual-keyboard button {
+          margin: 4px;
+          padding: 8px 12px;
+          font-size: 14px;
+          border: none;
+          border-radius: 8px;
+          background: #1a2433;
+          color: #fff;
+        }
+        #virtual-keyboard button:active {
+          background: #4cc3ff;
+        }
+      </style>
 
-<div id="vk-toggle">⌨️</div>
-<div id="virtual-keyboard">
-  <button data-key="Escape">Esc</button>
-  <button data-key="Enter">Enter</button>
-  <button data-key="ArrowUp">↑</button>
-  <button data-key="ArrowDown">↓</button>
-  <button data-key="ArrowLeft">←</button>
-  <button data-key="ArrowRight">→</button>
-  <button data-key="Space">Space</button>
-</div>
+      <div id="vk-toggle">⌨️</div>
+      <div id="virtual-keyboard">
+        <button data-key="Escape">Esc</button>
+        <button data-key="Enter">Enter</button>
+        <button data-key="ArrowUp">↑</button>
+        <button data-key="ArrowDown">↓</button>
+        <button data-key="ArrowLeft">←</button>
+        <button data-key="ArrowRight">→</button>
+        <button data-key="Space">Space</button>
+      </div>
 
-<script>
-  const vkToggle = document.getElementById("vk-toggle");
-  const vkPanel = document.getElementById("virtual-keyboard");
+      <script>
+        const vkToggle = document.getElementById("vk-toggle");
+        const vkPanel = document.getElementById("virtual-keyboard");
+        vkToggle.onclick = () => {
+          vkPanel.style.display = (vkPanel.style.display === "none" ? "block" : "none");
+        };
 
-  vkToggle.onclick = () => {
-    vkPanel.style.display = (vkPanel.style.display === "none" ? "block" : "none");
-  };
+        // Map logical keys to keyCode values RPG Maker expects
+        const keyMap = {
+          "Escape": 27,
+          "Enter": 13,
+          "Space": 32,
+          "ArrowUp": 38,
+          "ArrowDown": 40,
+          "ArrowLeft": 37,
+          "ArrowRight": 39
+        };
 
-  // Map logical keys to keyCode values RPG Maker expects
-  const keyMap = {
-    "Escape": 27,
-    "Enter": 13,
-    " ": 32, // Space
-    "ArrowUp": 38,
-    "ArrowDown": 40,
-    "ArrowLeft": 37,
-    "ArrowRight": 39
-  };
+        function simulateKey(keyName) {
+          const code = keyMap[keyName];
+          if (!code) return;
 
-  function simulateKey(key) {
-    const code = keyMap[key] || 0;
-    const eventDown = new KeyboardEvent("keydown", {
-      key: key === " " ? " " : key,
-      code: key,
-      keyCode: code,
-      which: code,
-      bubbles: true
-    });
-    Object.defineProperty(eventDown, "keyCode", {value: code});
-    Object.defineProperty(eventDown, "which", {value: code});
+          function fire(type) {
+            const event = new Event(type, { bubbles: true, cancelable: true });
+            event.keyCode = code;
+            event.which = code;
+            event.code = keyName;
+            event.key = keyName === "Space" ? " " : keyName;
+            window.dispatchEvent(event);
+          }
 
-    const eventUp = new KeyboardEvent("keyup", {
-      key: key === " " ? " " : key,
-      code: key,
-      keyCode: code,
-      which: code,
-      bubbles: true
-    });
-    Object.defineProperty(eventUp, "keyCode", {value: code});
-    Object.defineProperty(eventUp, "which", {value: code});
+          fire("keydown");
+          setTimeout(() => fire("keyup"), 100);
+        }
 
-    window.dispatchEvent(eventDown);
-    setTimeout(() => window.dispatchEvent(eventUp), 100);
-  }
-
-  document.querySelectorAll("#virtual-keyboard button").forEach(btn => {
-    btn.onclick = () => simulateKey(btn.dataset.key);
-  });
-</script>
-
-
+        document.querySelectorAll("#virtual-keyboard button").forEach(btn => {
+          btn.onclick = () => simulateKey(btn.dataset.key);
+        });
+      </script>
     </body>
 </html>
 
