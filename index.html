@@ -1,122 +1,126 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="viewport" content="user-scalable=no">
-        <link rel="icon" href="icon/icon.png" type="image/png">
-        <link rel="apple-touch-icon" href="icon/icon.png">
-        <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
-        <title>冬日狂想曲 v1.02</title>
-    </head>
-    <body style="background-color: black">
-        <script type="text/javascript" src="js/libs/pixi.js"></script>
-        <script type="text/javascript" src="js/libs/pixi-tilemap.js"></script>
-        <script type="text/javascript" src="js/libs/pixi-picture.js"></script>
-        <script type="text/javascript" src="js/libs/fpsmeter.js"></script>
-        <script type="text/javascript" src="js/libs/lz-string.js"></script>
-        <script type="text/javascript" src="js/libs/iphone-inline-video.browser.js"></script>
-        <script type="text/javascript" src="js/rpg_core.js"></script>
-        <script type="text/javascript" src="js/rpg_managers.js"></script>
-        <script type="text/javascript" src="js/rpg_objects.js"></script>
-        <script type="text/javascript" src="js/rpg_scenes.js"></script>
-        <script type="text/javascript" src="js/rpg_sprites.js"></script>
-        <script type="text/javascript" src="js/rpg_windows.js"></script>
-        <script type="text/javascript" src="js/plugins.js"></script>
-        <script type="text/javascript" src="js/main.js"></script>
+<head>
+  <meta charset="UTF-8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="user-scalable=no">
+  <link rel="icon" href="icon/icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon/icon.png">
+  <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
+  <title>冬日狂想曲 v1.02</title>
+  <style>
+    /* Virtual Keyboard styles */
+    #vk-toggle {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      z-index: 9999;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid #4cc3ff;
+      border-radius: 10px;
+      padding: 6px 12px;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    #virtual-keyboard {
+      display: none;
+      position: fixed;
+      bottom: 60px;
+      right: 12px;
+      z-index: 9999;
+      background: rgba(0,0,0,0.85);
+      border: 1px solid #4cc3ff;
+      border-radius: 12px;
+      padding: 8px;
+      backdrop-filter: blur(4px);
+    }
+    #virtual-keyboard button {
+      margin: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #1a2433;
+      color: #fff;
+      min-width: 48px;
+    }
+    #virtual-keyboard button:active {
+      background: #4cc3ff;
+    }
+  </style>
+</head>
+<body style="background-color: black">
+  <!-- Game engine scripts -->
+  <script type="text/javascript" src="js/libs/pixi.js"></script>
+  <script type="text/javascript" src="js/libs/pixi-tilemap.js"></script>
+  <script type="text/javascript" src="js/libs/pixi-picture.js"></script>
+  <script type="text/javascript" src="js/libs/fpsmeter.js"></script>
+  <script type="text/javascript" src="js/libs/lz-string.js"></script>
+  <script type="text/javascript" src="js/libs/iphone-inline-video.browser.js"></script>
+  <script type="text/javascript" src="js/rpg_core.js"></script>
+  <script type="text/javascript" src="js/rpg_managers.js"></script>
+  <script type="text/javascript" src="js/rpg_objects.js"></script>
+  <script type="text/javascript" src="js/rpg_scenes.js"></script>
+  <script type="text/javascript" src="js/rpg_sprites.js"></script>
+  <script type="text/javascript" src="js/rpg_windows.js"></script>
+  <script type="text/javascript" src="js/plugins.js"></script>
+  <script type="text/javascript" src="js/main.js"></script>
 
-        <style>
-          #vk-toggle {
-          position: fixed;
-          bottom: 12px;
-          right: 12px;
-          z-index: 9999;
-          background: rgba(0,0,0,0.6);
-          border: 1px solid #4cc3ff;
-          border-radius: 10px;
-          padding: 6px 12px;
-          color: #fff;
-          font-size: 14px;
-          cursor: pointer;
-        }
-        #virtual-keyboard {
-          display: none;
-          position: fixed;
-          bottom: 60px;
-          right: 12px;
-          z-index: 9999;
-          background: rgba(0,0,0,0.8);
-          border: 1px solid #4cc3ff;
-          border-radius: 12px;
-          padding: 8px;
-          backdrop-filter: blur(4px);
-        }
-        #virtual-keyboard button {
-          margin: 4px;
-          padding: 8px 12px;
-          font-size: 14px;
-          border: none;
-          border-radius: 8px;
-          background: #1a2433;
-          color: #fff;
-        }
-        #virtual-keyboard button:active {
-          background: #4cc3ff;
-        }
-      </style>
+  <!-- Virtual Keyboard toggle + panel -->
+  <div id="vk-toggle">⌨️</div>
+  <div id="virtual-keyboard">
+    <button data-key="Escape">Esc</button>
+    <button data-key="Enter">Enter</button>
+    <button data-key="ArrowUp">↑</button>
+    <button data-key="ArrowDown">↓</button>
+    <button data-key="ArrowLeft">←</button>
+    <button data-key="ArrowRight">→</button>
+    <button data-key="Space">Space</button>
+  </div>
 
-      <div id="vk-toggle">⌨️</div>
-      <div id="virtual-keyboard">
-        <button data-key="Escape">Esc</button>
-        <button data-key="Enter">Enter</button>
-        <button data-key="ArrowUp">↑</button>
-        <button data-key="ArrowDown">↓</button>
-        <button data-key="ArrowLeft">←</button>
-        <button data-key="ArrowRight">→</button>
-        <button data-key="Space">Space</button>
-      </div>
+  <script>
+    const vkToggle = document.getElementById("vk-toggle");
+    const vkPanel = document.getElementById("virtual-keyboard");
 
-      <script>
-        const vkToggle = document.getElementById("vk-toggle");
-        const vkPanel = document.getElementById("virtual-keyboard");
-        vkToggle.onclick = () => {
-          vkPanel.style.display = (vkPanel.style.display === "none" ? "block" : "none");
-        };
+    vkToggle.onclick = () => {
+      vkPanel.style.display = (vkPanel.style.display === "none" ? "block" : "none");
+    };
 
-        // Map logical keys to keyCode values RPG Maker expects
-        const keyMap = {
-          "Escape": 27,
-          "Enter": 13,
-          "Space": 32,
-          "ArrowUp": 38,
-          "ArrowDown": 40,
-          "ArrowLeft": 37,
-          "ArrowRight": 39
-        };
+    const keyMap = {
+      "Escape": 27,
+      "Enter": 13,
+      "Space": 32,
+      "ArrowUp": 38,
+      "ArrowDown": 40,
+      "ArrowLeft": 37,
+      "ArrowRight": 39
+    };
 
-        function simulateKey(keyName) {
-          const code = keyMap[keyName];
-          if (!code) return;
+    function fireKeyEvent(type, keyName) {
+      const code = keyMap[keyName];
+      if (!code) return;
 
-          function fire(type) {
-            const event = new Event(type, { bubbles: true, cancelable: true });
-            event.keyCode = code;
-            event.which = code;
-            event.code = keyName;
-            event.key = keyName === "Space" ? " " : keyName;
-            window.dispatchEvent(event);
-          }
+      const event = new Event(type, { bubbles: true, cancelable: true });
 
-          fire("keydown");
-          setTimeout(() => fire("keyup"), 100);
-        }
+      Object.defineProperty(event, "keyCode", { get: () => code });
+      Object.defineProperty(event, "which",   { get: () => code });
+      Object.defineProperty(event, "code",    { get: () => keyName });
+      Object.defineProperty(event, "key",     { get: () => (keyName === "Space" ? " " : keyName) });
 
-        document.querySelectorAll("#virtual-keyboard button").forEach(btn => {
-          btn.onclick = () => simulateKey(btn.dataset.key);
-        });
-      </script>
-    </body>
+      window.dispatchEvent(event);
+    }
+
+    function simulateKey(keyName) {
+      fireKeyEvent("keydown", keyName);
+      setTimeout(() => fireKeyEvent("keyup", keyName), 80);
+    }
+
+    document.querySelectorAll("#virtual-keyboard button").forEach(btn => {
+      btn.onclick = () => simulateKey(btn.dataset.key);
+    });
+  </script>
+</body>
 </html>
-
-
