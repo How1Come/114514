@@ -1,71 +1,167 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1">
-  <link rel="icon" href="icon/icon.png" type="image/png">
-  <link rel="apple-touch-icon" href="icon/icon.png">
-  <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
-  <title>冬日狂想曲 v1.02</title>
-</head>
-<body style="background-color: black">
-  <!-- RPG Maker Engine -->
-  <script src="js/libs/pixi.js"></script>
-  <script src="js/libs/pixi-tilemap.js"></script>
-  <script src="js/libs/pixi-picture.js"></script>
-  <script src="js/libs/fpsmeter.js"></script>
-  <script src="js/libs/lz-string.js"></script>
-  <script src="js/libs/iphone-inline-video.browser.js"></script>
-  <script src="js/rpg_core.js"></script>
-  <script src="js/rpg_managers.js"></script>
-  <script src="js/rpg_objects.js"></script>
-  <script src="js/rpg_scenes.js"></script>
-  <script src="js/rpg_sprites.js"></script>
-  <script src="js/rpg_windows.js"></script>
-  <script src="js/plugins.js"></script>
-  <script src="js/main.js"></script>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="user-scalable=no">
+    <link rel="icon" href="icon/icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon/icon.png">
+    <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
+    <title>冬日狂想曲 v1.02</title>
+    <style>
+      /* ===== CHEAT SIDEBAR ===== */
+      #cheatToggle {
+        position: fixed; top: 50%; right: 0;
+        transform: translateY(-50%);
+        background: #222; color: #fff;
+        padding: 6px 10px; border-radius: 6px 0 0 6px;
+        cursor: pointer; z-index: 99999;
+      }
+      #cheatPanel {
+        position: fixed; top: 0; right: -340px; height: 100%;
+        width: 340px; background: #111; color: #fff;
+        overflow-y: auto; z-index: 99998; padding: 10px;
+        transition: right 0.3s;
+        font-family: Arial, sans-serif; font-size: 14px;
+      }
+      #cheatPanel.open { right: 0; }
+      #cheatPanel h2 { font-size:16px; margin:10px 0; border-bottom:1px solid #444; }
+      #cheatPanel label { display:inline-block; width:140px; }
+      #cheatPanel input { width:60px; margin-right:6px; }
+      #cheatPanel button { margin:2px; }
+      #cheatTabs { margin-bottom:10px; }
+      #cheatTabs button { margin-right:4px; }
+    </style>
+  </head>
+  <body style="background-color: black">
+    <!-- GAME -->
+    <script src="js/libs/pixi.js"></script>
+    <script src="js/libs/pixi-tilemap.js"></script>
+    <script src="js/libs/pixi-picture.js"></script>
+    <script src="js/libs/fpsmeter.js"></script>
+    <script src="js/libs/lz-string.js"></script>
+    <script src="js/libs/iphone-inline-video.browser.js"></script>
+    <script src="js/rpg_core.js"></script>
+    <script src="js/rpg_managers.js"></script>
+    <script src="js/rpg_objects.js"></script>
+    <script src="js/rpg_scenes.js"></script>
+    <script src="js/rpg_sprites.js"></script>
+    <script src="js/rpg_windows.js"></script>
+    <script src="js/plugins.js"></script>
+    <script src="js/main.js"></script>
 
-  <!-- ===== Simple Virtual ESC Key ===== -->
-  <style>
-    #esc-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 9999;
-      padding: 14px 20px;
-      border-radius: 12px;
-      border: none;
-      background: #0a5486;
-      color: #fff;
-      font-weight: bold;
-      font-size: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-  </style>
+    <!-- ===== CHEAT TOOLBAR ===== -->
+    <div id="cheatToggle">»</div>
+    <div id="cheatPanel">
+      <h2>Cheat Menu</h2>
+      <div id="cheatTabs">
+        <button onclick="showCheatTab('items')">Items</button>
+        <button onclick="showCheatTab('actors')">Actors</button>
+        <button onclick="showCheatTab('vars')">Vars</button>
+      </div>
+      <div id="cheatContent"></div>
+    </div>
 
-  <button id="esc-btn">ESC</button>
-
-  <script>
-    const escBtn = document.getElementById("esc-btn");
-
-    function sendEscEvent() {
-      const options = {
-        key: "Escape",
-        code: "Escape",
-        keyCode: 27,
-        which: 27,
-        bubbles: true
+    <script>
+      // Toggle panel
+      document.getElementById("cheatToggle").onclick = function(){
+        document.getElementById("cheatPanel").classList.toggle("open");
       };
-      document.dispatchEvent(new KeyboardEvent("keydown", options));
-      setTimeout(() => {
-        document.dispatchEvent(new KeyboardEvent("keyup", options));
-      }, 100);
-    }
 
-    escBtn.onclick = sendEscEvent;
-  </script>
-</body>
+      // Switch tab content
+      function showCheatTab(tab){
+        const box = document.getElementById("cheatContent");
+        box.innerHTML = "";
+        if(tab==="items") buildItemEditor(box);
+        if(tab==="actors") buildActorEditor(box);
+        if(tab==="vars") buildVarEditor(box);
+      }
+
+      // ==== Items ====
+      function buildItemEditor(container){
+        if(!$dataItems || !$gameParty) { container.innerHTML="Game not loaded yet."; return; }
+        $dataItems.forEach(item=>{
+          if(item){
+            const row=document.createElement("div");
+            row.innerHTML=`<label>${item.name}</label>
+              <input type="number" id="cheat-item-${item.id}" value="${$gameParty.numItems(item)}">
+              <button onclick="setItem(${item.id})">Set</button>`;
+            container.appendChild(row);
+          }
+        });
+      }
+      function setItem(id){
+        const val=parseInt(document.getElementById("cheat-item-"+id).value);
+        if(isNaN(val))return;
+        const item=$dataItems[id];
+        const current=$gameParty.numItems(item);
+        $gameParty.gainItem(item,val-current);
+        alert(item.name+" set to "+val);
+      }
+
+      // ==== Actors ====
+      function buildActorEditor(container){
+        if(!$gameActors) { container.innerHTML="Game not loaded yet."; return; }
+        $gameParty.members().forEach(actor=>{
+          const row=document.createElement("div");
+          row.innerHTML=`<b>${actor.name()}</b><br>
+            <label>HP:</label><input type="number" id="hp-${actor.actorId()}" value="${actor.hp}">
+            <button onclick="setActorHP(${actor.actorId()})">Set</button><br>
+            <label>MP:</label><input type="number" id="mp-${actor.actorId()}" value="${actor.mp}">
+            <button onclick="setActorMP(${actor.actorId()})">Set</button><br>
+            <label>Level:</label><input type="number" id="lv-${actor.actorId()}" value="${actor.level}">
+            <button onclick="setActorLV(${actor.actorId()})">Set</button><hr>`;
+          container.appendChild(row);
+        });
+      }
+      function setActorHP(id){
+        const a=$gameActors.actor(id);
+        const v=parseInt(document.getElementById("hp-"+id).value);
+        if(!isNaN(v)){ a.setHp(v); alert(a.name()+" HP = "+v); }
+      }
+      function setActorMP(id){
+        const a=$gameActors.actor(id);
+        const v=parseInt(document.getElementById("mp-"+id).value);
+        if(!isNaN(v)){ a.setMp(v); alert(a.name()+" MP = "+v); }
+      }
+      function setActorLV(id){
+        const a=$gameActors.actor(id);
+        const v=parseInt(document.getElementById("lv-"+id).value);
+        if(!isNaN(v)){ a.changeLevel(v,false); alert(a.name()+" Level = "+v); }
+      }
+
+      // ==== Variables & Switches ====
+      function buildVarEditor(container){
+        if(!$gameVariables || !$gameSwitches) { container.innerHTML="Game not loaded yet."; return; }
+        container.innerHTML += "<h3>Variables</h3>";
+        for(let i=1;i<=10;i++){ // show first 10 only for demo
+          const val=$gameVariables.value(i);
+          const row=document.createElement("div");
+          row.innerHTML=`<label>Var ${i}</label>
+            <input type="number" id="var-${i}" value="${val}">
+            <button onclick="setVar(${i})">Set</button>`;
+          container.appendChild(row);
+        }
+        container.innerHTML += "<h3>Switches</h3>";
+        for(let i=1;i<=10;i++){ // show first 10
+          const val=$gameSwitches.value(i);
+          const row=document.createElement("div");
+          row.innerHTML=`<label>Switch ${i}</label>
+            <input type="checkbox" id="sw-${i}" ${val?"checked":""} onchange="setSwitch(${i})">`;
+          container.appendChild(row);
+        }
+      }
+      function setVar(i){
+        const v=parseInt(document.getElementById("var-"+i).value);
+        if(!isNaN(v)){ $gameVariables.setValue(i,v); alert("Var "+i+" = "+v); }
+      }
+      function setSwitch(i){
+        const v=document.getElementById("sw-"+i).checked;
+        $gameSwitches.setValue(i,v);
+        alert("Switch "+i+" = "+v);
+      }
+    </script>
+  </body>
 </html>
