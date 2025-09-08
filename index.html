@@ -2,9 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <!-- Modern mobile web app capable -->
   <meta name="mobile-web-app-capable" content="yes">
-  <!-- Legacy iOS (still useful for older devices) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1">
@@ -15,91 +13,59 @@
 </head>
 <body style="background-color: black">
   <!-- RPG Maker Engine -->
-  <script type="text/javascript" src="js/libs/pixi.js"></script>
-  <script type="text/javascript" src="js/libs/pixi-tilemap.js"></script>
-  <script type="text/javascript" src="js/libs/pixi-picture.js"></script>
-  <script type="text/javascript" src="js/libs/fpsmeter.js"></script>
-  <script type="text/javascript" src="js/libs/lz-string.js"></script>
-  <script type="text/javascript" src="js/libs/iphone-inline-video.browser.js"></script>
-  <script type="text/javascript" src="js/rpg_core.js"></script>
-  <script type="text/javascript" src="js/rpg_managers.js"></script>
-  <script type="text/javascript" src="js/rpg_objects.js"></script>
-  <script type="text/javascript" src="js/rpg_scenes.js"></script>
-  <script type="text/javascript" src="js/rpg_sprites.js"></script>
-  <script type="text/javascript" src="js/rpg_windows.js"></script>
-  <script type="text/javascript" src="js/plugins.js"></script>
-  <script type="text/javascript" src="js/main.js"></script>
+  <script src="js/libs/pixi.js"></script>
+  <script src="js/libs/pixi-tilemap.js"></script>
+  <script src="js/libs/pixi-picture.js"></script>
+  <script src="js/libs/fpsmeter.js"></script>
+  <script src="js/libs/lz-string.js"></script>
+  <script src="js/libs/iphone-inline-video.browser.js"></script>
+  <script src="js/rpg_core.js"></script>
+  <script src="js/rpg_managers.js"></script>
+  <script src="js/rpg_objects.js"></script>
+  <script src="js/rpg_scenes.js"></script>
+  <script src="js/rpg_sprites.js"></script>
+  <script src="js/rpg_windows.js"></script>
+  <script src="js/plugins.js"></script>
+  <script src="js/main.js"></script>
 
-  <!-- ===== Virtual Keyboard ===== -->
+  <!-- ===== Simple Virtual ESC Key ===== -->
   <style>
-    #vk-toggle {
+    #esc-btn {
       position: fixed;
       bottom: 20px;
       right: 20px;
       z-index: 9999;
-      padding: 10px 14px;
+      padding: 14px 20px;
       border-radius: 12px;
       border: none;
       background: #0a5486;
       color: #fff;
       font-weight: bold;
       font-size: 16px;
-    }
-    #virtual-keyboard {
-      position: fixed;
-      bottom: 70px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(20,20,20,0.95);
-      padding: 10px;
-      border-radius: 10px;
-      display: none;
-      z-index: 9999;
-    }
-    #virtual-keyboard button {
-      margin: 4px;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background: #153045;
-      color: #fff;
-      font-size: 14px;
-      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
   </style>
 
-  <button id="vk-toggle">⌨️</button>
-  <div id="virtual-keyboard">
-    <button data-key="Escape">ESC</button>
-    <button data-key="Enter">ENTER</button>
-    <button data-key=" ">SPACE</button>
-    <br>
-    <button data-key="ArrowUp">↑</button>
-    <br>
-    <button data-key="ArrowLeft">←</button>
-    <button data-key="ArrowDown">↓</button>
-    <button data-key="ArrowRight">→</button>
-  </div>
+  <button id="esc-btn">ESC</button>
 
   <script>
-    const vkToggle = document.getElementById("vk-toggle");
-    const vk = document.getElementById("virtual-keyboard");
+    const escBtn = document.getElementById("esc-btn");
 
-    vkToggle.onclick = () => {
-      vk.style.display = vk.style.display === "none" ? "block" : "none";
-    };
+    function sendEscEvent() {
+      const options = {
+        key: "Escape",
+        code: "Escape",
+        keyCode: 27,
+        which: 27,
+        bubbles: true
+      };
+      document.dispatchEvent(new KeyboardEvent("keydown", options));
+      setTimeout(() => {
+        document.dispatchEvent(new KeyboardEvent("keyup", options));
+      }, 100);
+    }
 
-    vk.querySelectorAll("button").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const key = btn.dataset.key;
-
-        // Send real key events so RPG Maker reacts
-        document.dispatchEvent(new KeyboardEvent("keydown", { key }));
-        setTimeout(() => {
-          document.dispatchEvent(new KeyboardEvent("keyup", { key }));
-        }, 100);
-      });
-    });
+    escBtn.onclick = sendEscEvent;
   </script>
 </body>
 </html>
