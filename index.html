@@ -12,13 +12,6 @@
     <title>冬日狂想曲 v1.02</title>
     <style>
       /* ===== CHEAT SIDEBAR ===== */
-      #cheatToggle {
-        position: fixed; top: 50%; right: 0;
-        transform: translateY(-50%);
-        background: #222; color: #fff;
-        padding: 6px 10px; border-radius: 6px 0 0 6px;
-        cursor: pointer; z-index: 99999;
-      }
       #cheatPanel {
         position: fixed; top: 0; right: -340px; height: 100%;
         width: 340px; background: #111; color: #fff;
@@ -27,12 +20,30 @@
         font-family: Arial, sans-serif; font-size: 14px;
       }
       #cheatPanel.open { right: 0; }
+      #cheatToggle {
+        position: absolute; top: 50%; left: -28px;
+        transform: translateY(-50%);
+        background: #222; color: #fff;
+        padding: 6px 8px; border-radius: 6px 0 0 6px;
+        cursor: pointer; z-index: 99999;
+      }
       #cheatPanel h2 { font-size:16px; margin:10px 0; border-bottom:1px solid #444; }
       #cheatPanel label { display:inline-block; width:140px; }
       #cheatPanel input { width:60px; margin-right:6px; }
       #cheatPanel button { margin:2px; }
       #cheatTabs { margin-bottom:10px; }
       #cheatTabs button { margin-right:4px; }
+
+      /* ===== Virtual ESC Button ===== */
+      #escButton {
+        position: fixed; bottom: 20px; left: 20px;
+        background: #444; color: white;
+        border: none; border-radius: 50%;
+        width: 60px; height: 60px;
+        font-size: 18px; font-weight: bold;
+        cursor: pointer; z-index: 99999;
+        touch-action: none;
+      }
     </style>
   </head>
   <body style="background-color: black">
@@ -53,8 +64,8 @@
     <script src="js/main.js"></script>
 
     <!-- ===== CHEAT TOOLBAR ===== -->
-    <div id="cheatToggle">»</div>
     <div id="cheatPanel">
+      <div id="cheatToggle">«</div>
       <h2>Cheat Menu</h2>
       <div id="cheatTabs">
         <button onclick="showCheatTab('items')">Items</button>
@@ -64,13 +75,16 @@
       <div id="cheatContent"></div>
     </div>
 
+    <!-- Virtual ESC -->
+    <button id="escButton">ESC</button>
+
     <script>
-      // Toggle panel
+      // === Sidebar ===
       document.getElementById("cheatToggle").onclick = function(){
         document.getElementById("cheatPanel").classList.toggle("open");
+        this.textContent = document.getElementById("cheatPanel").classList.contains("open") ? "»" : "«";
       };
 
-      // Switch tab content
       function showCheatTab(tab){
         const box = document.getElementById("cheatContent");
         box.innerHTML = "";
@@ -136,7 +150,7 @@
       function buildVarEditor(container){
         if(!$gameVariables || !$gameSwitches) { container.innerHTML="Game not loaded yet."; return; }
         container.innerHTML += "<h3>Variables</h3>";
-        for(let i=1;i<=10;i++){ // show first 10 only for demo
+        for(let i=1;i<=10;i++){ // show first 10 only
           const val=$gameVariables.value(i);
           const row=document.createElement("div");
           row.innerHTML=`<label>Var ${i}</label>
@@ -145,7 +159,7 @@
           container.appendChild(row);
         }
         container.innerHTML += "<h3>Switches</h3>";
-        for(let i=1;i<=10;i++){ // show first 10
+        for(let i=1;i<=10;i++){
           const val=$gameSwitches.value(i);
           const row=document.createElement("div");
           row.innerHTML=`<label>Switch ${i}</label>
@@ -161,6 +175,44 @@
         const v=document.getElementById("sw-"+i).checked;
         $gameSwitches.setValue(i,v);
         alert("Switch "+i+" = "+v);
+      }
+
+      // === Virtual ESC Button ===
+      const escBtn = document.getElementById("escButton");
+      escBtn.onclick = ()=> {
+        const e = new KeyboardEvent("keydown", { key:"Escape", keyCode:27, which:27, bubbles:true });
+        window.dispatchEvent(e);
+      };
+
+      // Make ESC button draggable
+      let dragOffsetX, dragOffsetY, dragging=false;
+      escBtn.addEventListener("touchstart", startDrag);
+      escBtn.addEventListener("mousedown", startDrag);
+      function startDrag(e){
+        dragging=true;
+        const rect=escBtn.getBoundingClientRect();
+        dragOffsetX=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+        dragOffsetY=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+        document.addEventListener("mousemove", onDrag);
+        document.addEventListener("mouseup", endDrag);
+        document.addEventListener("touchmove", onDrag);
+        document.addEventListener("touchend", endDrag);
+      }
+      function onDrag(e){
+        if(!dragging)return;
+        const x=(e.touches?e.touches[0].clientX:e.clientX)-dragOffsetX;
+        const y=(e.touches?e.touches[0].clientY:e.clientY)-dragOffsetY;
+        escBtn.style.left=x+"px";
+        escBtn.style.top=y+"px";
+        escBtn.style.right="auto";
+        escBtn.style.bottom="auto";
+      }
+      function endDrag(){
+        dragging=false;
+        document.removeEventListener("mousemove", onDrag);
+        document.removeEventListener("mouseup", endDrag);
+        document.removeEventListener("touchmove", onDrag);
+        document.removeEventListener("touchend", endDrag);
       }
     </script>
   </body>
