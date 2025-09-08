@@ -154,7 +154,23 @@
     </section>
 
     <p class="foot">Tip: Run this on the same site/origin where the game runs so the save keys appear. All operations happen locally in your browser.</p>
-  </div>
+
+      <!-- CLOUD SYNC -->
+    <section class="card" style="margin-top:16px">
+      <h2>Cloud Sync</h2>
+      <div class="help">Save to your Cloudflare Worker, restore on another device.</div>
+      <div class="row" style="margin-top:6px">
+        <input type="text" id="cloudUser" placeholder="Username" />
+        <input type="password" id="cloudPass" placeholder="Password" />
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="btn-upload-cloud" class="btn primary">Upload to Cloud</button>
+        <button id="btn-download-cloud" class="btn">Download from Cloud</button>
+        <div class="spacer"></div>
+        <span id="cloudBadge" class="badge">Idle</span>
+      </div>
+    </section>
+
 
   <!-- EMBEDDED LZString LIBRARY -->
   <script>
@@ -287,6 +303,63 @@
     };
     reader.readAsText(f);
   };
+
+    // ==== Cloud Sync ====
+  function getAuthHeader() {
+    const u = document.getElementById("cloudUser").value.trim();
+    const p = document.getElementById("cloudPass").value.trim();
+    return "Basic " + btoa(u + ":" + p);
+  }
+
+  document.getElementById("btn-upload-cloud").onclick = async () => {
+    try {
+      const payload = {};
+      ALL_KEYS.filter(r => selected.has(r.key))
+              .forEach(r => payload[r.key] = r.value);
+
+      const res = await fetch("https://wm.howcome.dpdns.org/save/upload", {
+        method: "POST",
+        headers: {
+          "Authorization": getAuthHeader(),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        badge(document.getElementById("cloudBadge"), "Uploaded", "ok");
+      } else {
+        badge(document.getElementById("cloudBadge"), "Upload failed", "bad");
+      }
+    } catch (e) {
+      console.error(e);
+      badge(document.getElementById("cloudBadge"), "Error", "bad");
+    }
+  };
+
+  document.getElementById("btn-download-cloud").onclick = async () => {
+    try {
+      const res = await fetch("https://wm.howcome.dpdns.org/save/download", {
+        headers: { "Authorization": getAuthHeader() }
+      });
+
+      if (!res.ok) {
+        badge(document.getElementById("cloudBadge"), "No save", "bad");
+        return;
+      }
+
+      const obj = await res.json();
+      for (const k in obj) {
+        localStorage.setItem(k, obj[k]);
+      }
+      rescan();
+      badge(document.getElementById("cloudBadge"), "Restored", "ok");
+    } catch (e) {
+      console.error(e);
+      badge(document.getElementById("cloudBadge"), "Error", "bad");
+    }
+  };
+
 
   // ==== Drag-drop ====
   const drop=$("#drop");
