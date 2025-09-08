@@ -85,17 +85,48 @@
     vkPanel.style.display = (vkPanel.style.display === "none" ? "block" : "none");
   };
 
+  // Map logical keys to keyCode values RPG Maker expects
+  const keyMap = {
+    "Escape": 27,
+    "Enter": 13,
+    " ": 32, // Space
+    "ArrowUp": 38,
+    "ArrowDown": 40,
+    "ArrowLeft": 37,
+    "ArrowRight": 39
+  };
+
   function simulateKey(key) {
-    const down = new KeyboardEvent("keydown", { key, code: key, bubbles: true });
-    const up = new KeyboardEvent("keyup", { key, code: key, bubbles: true });
-    window.dispatchEvent(down);
-    setTimeout(() => window.dispatchEvent(up), 100);
+    const code = keyMap[key] || 0;
+    const eventDown = new KeyboardEvent("keydown", {
+      key: key === " " ? " " : key,
+      code: key,
+      keyCode: code,
+      which: code,
+      bubbles: true
+    });
+    Object.defineProperty(eventDown, "keyCode", {value: code});
+    Object.defineProperty(eventDown, "which", {value: code});
+
+    const eventUp = new KeyboardEvent("keyup", {
+      key: key === " " ? " " : key,
+      code: key,
+      keyCode: code,
+      which: code,
+      bubbles: true
+    });
+    Object.defineProperty(eventUp, "keyCode", {value: code});
+    Object.defineProperty(eventUp, "which", {value: code});
+
+    window.dispatchEvent(eventDown);
+    setTimeout(() => window.dispatchEvent(eventUp), 100);
   }
 
   document.querySelectorAll("#virtual-keyboard button").forEach(btn => {
     btn.onclick = () => simulateKey(btn.dataset.key);
   });
 </script>
+
 
     </body>
 </html>
