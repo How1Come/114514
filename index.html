@@ -140,6 +140,8 @@
         <button type="button" onclick="showCheatTab('items')">Items</button>
         <button type="button" onclick="showCheatTab('actors')">Actors</button>
         <button type="button" onclick="showCheatTab('vars')">Vars</button>
+        <button type="button" onclick="showCheatTab('time')">Time</button>
+        <button type="button" onclick="showCheatTab('settings')">Settings</button>
       </div>
       <div id="cheatContent">Choose a tab…</div>
     </div>
@@ -153,23 +155,10 @@
         const fab   = document.getElementById('cheatFab');
         const panel = document.getElementById('cheatPanel');
         const close = document.getElementById('cheatClose');
-
-        function openPanel(){
-          panel.classList.add('open');
-          panel.setAttribute('aria-hidden','false');
-          fab.style.display = 'none';
-        }
-        function closePanel(){
-          panel.classList.remove('open');
-          panel.setAttribute('aria-hidden','true');
-          fab.style.display = 'block';
-        }
+        function openPanel(){ panel.classList.add('open'); panel.setAttribute('aria-hidden','false'); fab.style.display = 'none'; }
+        function closePanel(){ panel.classList.remove('open'); panel.setAttribute('aria-hidden','true'); fab.style.display = 'block'; }
         fab.addEventListener('click', openPanel);
         close.addEventListener('click', closePanel);
-
-        // Expose for console tests
-        window.__cheatPanelOpen = openPanel;
-        window.__cheatPanelClose = closePanel;
       })();
 
       /* ========= Cheat tabs ========= */
@@ -178,9 +167,11 @@
         box.innerHTML = '';
         try {
           if (tab === 'money') return buildMoneyEditor(box);
-          if (tab === 'items')  return buildItemEditor(box);
+          if (tab === 'items') return buildItemEditor(box);
           if (tab === 'actors') return buildActorEditor(box);
-          if (tab === 'vars')   return buildVarEditor(box);
+          if (tab === 'vars') return buildVarEditor(box);
+          if (tab === 'time') return buildTimeEditor(box);
+          if (tab === 'settings') return buildSettingsEditor(box);
         } catch (e) {
           box.textContent = 'Game not fully loaded yet.';
         }
@@ -188,175 +179,107 @@
 
       /* ========= Money ========= */
       function buildMoneyEditor(container){
-        if (!window.$gameParty) {
-          container.textContent = 'Game not loaded yet.';
-          return;
-        }
-        const gold = $gameParty.gold ? $gameParty.gold() : 0;
-        const row = document.createElement('div');
-        row.className = 'row';
-        row.innerHTML =
+        if (!window.$gameParty) return container.textContent='Game not loaded yet.';
+        container.innerHTML =
           `<label>Money</label>
-           <input type="number" id="cheat-money" value="${gold}" min="0">
-           <button type="button" onclick="setMoney()">Set</button>`;
-        container.appendChild(row);
+           <input type="number" id="cheat-money" value="${$gameParty.gold()}">
+           <button onclick="setMoney()">Set</button>`;
       }
       function setMoney(){
-        const input = document.getElementById('cheat-money');
-        if (!input) return;
-        const val = parseInt(input.value, 10);
-        if (!isNaN(val) && window.$gameParty) {
-          $gameParty._gold = val;
-        }
+        const val = parseInt(document.getElementById('cheat-money').value,10);
+        if (!isNaN(val)) $gameParty._gold = val;
       }
 
       /* ========= Items ========= */
       function buildItemEditor(container){
-        if (!window.$dataItems || !window.$gameParty) {
-          container.textContent = 'Game not loaded yet.';
-          return;
-        }
-        window.$dataItems.forEach(item=>{
-          if (item) {
-            const row = document.createElement('div');
-            row.className = 'row';
-            row.innerHTML =
-              `<label>${item.name}</label>
-               <input type="number" id="cheat-item-${item.id}" value="${$gameParty.numItems(item)}" min="0">
-               <button type="button" onclick="setItem(${item.id})">Set</button>`;
-            container.appendChild(row);
-          }
+        if (!window.$dataItems || !window.$gameParty) return container.textContent='Game not loaded yet.';
+        $dataItems.forEach(item=>{
+          if (item) container.innerHTML +=
+            `<div class="row"><label>${item.name}</label>
+             <input type="number" id="cheat-item-${item.id}" value="${$gameParty.numItems(item)}">
+             <button onclick="setItem(${item.id})">Set</button></div>`;
         });
       }
       function setItem(id){
-        const input = document.getElementById('cheat-item-'+id);
-        if (!input) return;
-        const val = parseInt(input.value, 10);
-        if (isNaN(val)) return;
-        const item = $dataItems[id];
-        const cur = $gameParty.numItems(item);
-        $gameParty.gainItem(item, val - cur);
+        const val = parseInt(document.getElementById('cheat-item-'+id).value,10);
+        if (!isNaN(val)){ const item=$dataItems[id]; $gameParty.gainItem(item,val-$gameParty.numItems(item)); }
       }
 
       /* ========= Actors ========= */
       function buildActorEditor(container){
-        if (!window.$gameActors || !$gameParty) {
-          container.textContent = 'Game not loaded yet.';
-          return;
-        }
+        if (!window.$gameActors || !$gameParty) return container.textContent='Game not loaded yet.';
         $gameParty.members().forEach(actor=>{
-          const id = actor.actorId();
-          const block = document.createElement('div');
-          block.innerHTML =
-            `<b>${actor.name()}</b><br>
-             <label>HP:</label><input type="number" id="hp-${id}" value="${actor.hp}">
-             <button type="button" onclick="setActorHP(${id})">Set</button><br>
-             <label>MP:</label><input type="number" id="mp-${id}" value="${actor.mp}">
-             <button type="button" onclick="setActorMP(${id})">Set</button><br>
-             <label>Level:</label><input type="number" id="lv-${id}" value="${actor.level}">
-             <button type="button" onclick="setActorLV(${id})">Set</button>
-             <hr>`;
-          container.appendChild(block);
+          container.innerHTML += `<div><b>${actor.name()}</b><br>
+            <label>HP:</label><input id="hp-${actor.actorId()}" value="${actor.hp}">
+            <button onclick="setActorHP(${actor.actorId()})">Set</button><br>
+            <label>MP:</label><input id="mp-${actor.actorId()}" value="${actor.mp}">
+            <button onclick="setActorMP(${actor.actorId()})">Set</button><br>
+            <label>Level:</label><input id="lv-${actor.actorId()}" value="${actor.level}">
+            <button onclick="setActorLV(${actor.actorId()})">Set</button><hr></div>`;
         });
       }
-      function setActorHP(id){
-        const a = $gameActors.actor(id);
-        const v = parseInt(document.getElementById('hp-'+id).value,10);
-        if (!isNaN(v)) a.setHp(v);
-      }
-      function setActorMP(id){
-        const a = $gameActors.actor(id);
-        const v = parseInt(document.getElementById('mp-'+id).value,10);
-        if (!isNaN(v)) a.setMp(v);
-      }
-      function setActorLV(id){
-        const a = $gameActors.actor(id);
-        const v = parseInt(document.getElementById('lv-'+id).value,10);
-        if (!isNaN(v)) a.changeLevel(v,false);
-      }
+      function setActorHP(id){ $gameActors.actor(id).setHp(parseInt(document.getElementById('hp-'+id).value,10)); }
+      function setActorMP(id){ $gameActors.actor(id).setMp(parseInt(document.getElementById('mp-'+id).value,10)); }
+      function setActorLV(id){ $gameActors.actor(id).changeLevel(parseInt(document.getElementById('lv-'+id).value,10),false); }
 
-      /* ========= Variables & Switches ========= */
+      /* ========= Vars & Switches ========= */
       function buildVarEditor(container){
-        if (!window.$gameVariables || !window.$gameSwitches) {
-          container.textContent = 'Game not loaded yet.';
-          return;
-        }
-        const varsTitle = document.createElement('h3');
-        varsTitle.textContent = 'Variables';
-        container.appendChild(varsTitle);
+        if (!window.$gameVariables) return container.textContent='Game not loaded yet.';
         for (let i=1;i<=10;i++){
-          const row = document.createElement('div');
-          row.className = 'row';
-          row.innerHTML =
-            `<label>Var ${i}</label>
-             <input type="number" id="var-${i}" value="${$gameVariables.value(i)}">
-             <button type="button" onclick="setVar(${i})">Set</button>`;
-          container.appendChild(row);
+          container.innerHTML += `<div><label>Var ${i}</label>
+            <input id="var-${i}" value="${$gameVariables.value(i)}">
+            <button onclick="setVar(${i})">Set</button></div>`;
         }
-        const swTitle = document.createElement('h3');
-        swTitle.textContent = 'Switches';
-        container.appendChild(swTitle);
         for (let i=1;i<=10;i++){
-          const row = document.createElement('div');
-          row.className = 'row';
-          row.innerHTML =
-            `<label>Switch ${i}</label>
-             <input type="checkbox" id="sw-${i}" ${$gameSwitches.value(i)?'checked':''}
-               onchange="setSwitch(${i})">`;
-          container.appendChild(row);
+          container.innerHTML += `<div><label>Switch ${i}</label>
+            <input type="checkbox" id="sw-${i}" ${$gameSwitches.value(i)?'checked':''}
+            onchange="setSwitch(${i})"></div>`;
         }
       }
-      function setVar(i){
-        const v = parseInt(document.getElementById('var-'+i).value,10);
-        if (!isNaN(v)) $gameVariables.setValue(i,v);
+      function setVar(i){ $gameVariables.setValue(i,parseInt(document.getElementById('var-'+i).value,10)); }
+      function setSwitch(i){ $gameSwitches.setValue(i,document.getElementById('sw-'+i).checked); }
+
+      /* ========= Time ========= */
+      function buildTimeEditor(container){
+        if (!window.$gameVariables) return container.textContent='Game not loaded yet.';
+        let found=false;
+        $gameVariables._data.forEach((val,i)=>{
+          if (i>0 && typeof val==='number' && val>0 && val<999999){
+            found=true;
+            container.innerHTML+=`<div><label>Var ${i} (time?)</label>
+              <input id="time-${i}" value="${val}">
+              <button onclick="setTime(${i})">Set</button></div>`;
+          }
+        });
+        if(!found) container.textContent='No candidate time variables found.';
       }
-      function setSwitch(i){
-        const v = document.getElementById('sw-'+i).checked;
-        $gameSwitches.setValue(i,v);
+      function setTime(i){ $gameVariables.setValue(i,parseInt(document.getElementById('time-'+i).value,10)); }
+
+      /* ========= Settings ========= */
+      let autosaveTimer=null;
+      function buildSettingsEditor(container){
+        container.innerHTML=`<div><label>Auto-save (minutes)</label>
+          <input id="autosave-mins" value="5">
+          <button onclick="enableAutosave()">Enable</button>
+          <button onclick="disableAutosave()">Disable</button></div>
+          <hr><button onclick="forceSave()">Force Save Menu</button>
+          <button onclick="forceLoad()">Force Load Menu</button>`;
       }
+      function enableAutosave(){
+        const mins=parseInt(document.getElementById('autosave-mins').value,10);
+        if(isNaN(mins)||mins<=0)return;
+        if(autosaveTimer)clearInterval(autosaveTimer);
+        autosaveTimer=setInterval(()=>{try{$gameSystem.onBeforeSave();DataManager.saveGame(1);}catch(e){}},mins*60000);
+        alert('Auto-save enabled every '+mins+' minutes');
+      }
+      function disableAutosave(){ if(autosaveTimer)clearInterval(autosaveTimer); autosaveTimer=null; alert('Auto-save disabled'); }
+      function forceSave(){ SceneManager.push(Scene_Save); }
+      function forceLoad(){ SceneManager.push(Scene_Load); }
 
       /* ========= Virtual ESC ========= */
       (function(){
-        const btn = document.getElementById('escButton');
-        function openMenuDirect(){
-          try {
-            if (window.SceneManager && SceneManager._scene) {
-              const sc = SceneManager._scene;
-              if (window.Scene_Map && sc instanceof Scene_Map) {
-                if (window.$gamePlayer && $gamePlayer.canMove()) {
-                  if (window.SoundManager && SoundManager.playOk) SoundManager.playOk();
-                  if (window.Window_MenuCommand && Window_MenuCommand.initCommandPosition) {
-                    Window_MenuCommand.initCommandPosition();
-                  }
-                  SceneManager.push(Scene_Menu);
-                  return true;
-                }
-              }
-            }
-          } catch(e) {}
-          return false;
-        }
-        function onEscPress(e){
-          e && e.preventDefault();
-          if (!openMenuDirect()) {
-            try {
-              const ev = new KeyboardEvent('keydown', {key:'Escape', code:'Escape', bubbles:true, cancelable:true});
-              Object.defineProperty(ev, 'keyCode', {get: ()=>27});
-              Object.defineProperty(ev, 'which',   {get: ()=>27});
-              document.dispatchEvent(ev);
-              window.dispatchEvent(ev);
-              setTimeout(()=>{
-                const ev2 = new KeyboardEvent('keyup', {key:'Escape', code:'Escape', bubbles:true, cancelable:true});
-                Object.defineProperty(ev2, 'keyCode', {get: ()=>27});
-                Object.defineProperty(ev2, 'which',   {get: ()=>27});
-                document.dispatchEvent(ev2);
-                window.dispatchEvent(ev2);
-              },16);
-            } catch(_) {}
-          }
-        }
-        btn.addEventListener('click', onEscPress, {passive:false});
-        btn.addEventListener('touchstart', onEscPress, {passive:false});
+        const btn=document.getElementById('escButton');
+        btn.onclick=()=>{ if(SceneManager._scene instanceof Scene_Map){ SceneManager.push(Scene_Menu); } };
       })();
     </script>
   </body>
