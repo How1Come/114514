@@ -136,6 +136,7 @@
       <button id="cheatClose">Close</button>
       <h2>Cheat Menu</h2>
       <div id="cheatTabs">
+        <button type="button" onclick="showCheatTab('money')">Money</button>
         <button type="button" onclick="showCheatTab('items')">Items</button>
         <button type="button" onclick="showCheatTab('actors')">Actors</button>
         <button type="button" onclick="showCheatTab('vars')">Vars</button>
@@ -166,13 +167,6 @@
         fab.addEventListener('click', openPanel);
         close.addEventListener('click', closePanel);
 
-        // Close on outside tap if you like (disabled by default)
-        // document.addEventListener('click', (e)=>{
-        //   if(panel.classList.contains('open') && !panel.contains(e.target) && e.target!==fab){
-        //     closePanel();
-        //   }
-        // });
-
         // Expose for console tests
         window.__cheatPanelOpen = openPanel;
         window.__cheatPanelClose = closePanel;
@@ -183,11 +177,36 @@
         const box = document.getElementById('cheatContent');
         box.innerHTML = '';
         try {
+          if (tab === 'money') return buildMoneyEditor(box);
           if (tab === 'items')  return buildItemEditor(box);
           if (tab === 'actors') return buildActorEditor(box);
           if (tab === 'vars')   return buildVarEditor(box);
         } catch (e) {
           box.textContent = 'Game not fully loaded yet.';
+        }
+      }
+
+      /* ========= Money ========= */
+      function buildMoneyEditor(container){
+        if (!window.$gameParty) {
+          container.textContent = 'Game not loaded yet.';
+          return;
+        }
+        const gold = $gameParty.gold ? $gameParty.gold() : 0;
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML =
+          `<label>Money</label>
+           <input type="number" id="cheat-money" value="${gold}" min="0">
+           <button type="button" onclick="setMoney()">Set</button>`;
+        container.appendChild(row);
+      }
+      function setMoney(){
+        const input = document.getElementById('cheat-money');
+        if (!input) return;
+        const val = parseInt(input.value, 10);
+        if (!isNaN(val) && window.$gameParty) {
+          $gameParty._gold = val;
         }
       }
 
@@ -217,7 +236,6 @@
         const item = $dataItems[id];
         const cur = $gameParty.numItems(item);
         $gameParty.gainItem(item, val - cur);
-        // optional: SoundManager.playOk();
       }
 
       /* ========= Actors ========= */
@@ -257,7 +275,7 @@
         if (!isNaN(v)) a.changeLevel(v,false);
       }
 
-      /* ========= Variables & Switches (first 10 as sample) ========= */
+      /* ========= Variables & Switches ========= */
       function buildVarEditor(container){
         if (!window.$gameVariables || !window.$gameSwitches) {
           container.textContent = 'Game not loaded yet.';
@@ -297,15 +315,13 @@
         $gameSwitches.setValue(i,v);
       }
 
-      /* ========= Virtual ESC (mobile-safe: opens menu directly) ========= */
+      /* ========= Virtual ESC ========= */
       (function(){
         const btn = document.getElementById('escButton');
-
         function openMenuDirect(){
           try {
             if (window.SceneManager && SceneManager._scene) {
               const sc = SceneManager._scene;
-              // Only from map: mimic ESC (menu) behavior
               if (window.Scene_Map && sc instanceof Scene_Map) {
                 if (window.$gamePlayer && $gamePlayer.canMove()) {
                   if (window.SoundManager && SoundManager.playOk) SoundManager.playOk();
@@ -320,15 +336,11 @@
           } catch(e) {}
           return false;
         }
-
-        // On mobile, synthetic key events are ignored by MV; use direct open.
         function onEscPress(e){
           e && e.preventDefault();
           if (!openMenuDirect()) {
-            // As a last resort try dispatching a key event (may work on desktop)
             try {
               const ev = new KeyboardEvent('keydown', {key:'Escape', code:'Escape', bubbles:true, cancelable:true});
-              // Patch read-only props for older MV checks
               Object.defineProperty(ev, 'keyCode', {get: ()=>27});
               Object.defineProperty(ev, 'which',   {get: ()=>27});
               document.dispatchEvent(ev);
@@ -343,7 +355,6 @@
             } catch(_) {}
           }
         }
-
         btn.addEventListener('click', onEscPress, {passive:false});
         btn.addEventListener('touchstart', onEscPress, {passive:false});
       })();
