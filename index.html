@@ -17,7 +17,7 @@
       #cheatPanel {
         position: fixed;
         top: 0;
-        right: -360px;
+        right: -360px;        /* hidden */
         width: 360px;
         height: 100%;
         background: rgba(17,17,17,.98);
@@ -41,6 +41,7 @@
       #cheatClose {
         position: sticky;
         top: 0;
+        display: inline-block;
         background: #333;
         border: 1px solid #555;
         color: #fff;
@@ -65,7 +66,7 @@
       #cheatPanel .row { margin: 6px 0; }
       #cheatPanel hr { border: 0; border-top: 1px solid #333; margin: 8px 0; }
 
-      /* Floating open button */
+      /* Floating open button that’s visible when the panel is closed */
       #cheatFab {
         position: fixed;
         right: 12px;
@@ -85,7 +86,7 @@
         user-select: none;
       }
 
-      /* Virtual ESC button */
+      /* ===== Virtual ESC button (fixed at left corner) ===== */
       #escButton {
         position: fixed;
         left: 12px;
@@ -110,7 +111,7 @@
     </style>
   </head>
   <body style="background-color: black">
-    <!-- RPG Maker MV core -->
+    <!-- RPG Maker MV core files -->
     <script src="js/libs/pixi.js"></script>
     <script src="js/libs/pixi-tilemap.js"></script>
     <script src="js/libs/pixi-picture.js"></script>
@@ -127,166 +128,226 @@
     <script src="js/main.js"></script>
 
     <!-- Floating open button -->
-    <div id="cheatFab">≡</div>
+    <div id="cheatFab" title="Open cheats">≡</div>
 
     <!-- Cheat panel -->
     <div id="cheatPanel" aria-hidden="true">
       <button id="cheatClose">Close</button>
       <h2>Cheat Menu</h2>
       <div id="cheatTabs">
-        <button onclick="showCheatTab('money')">Money</button>
-        <button onclick="showCheatTab('items')">Items</button>
-        <button onclick="showCheatTab('actors')">Actors</button>
-        <button onclick="showCheatTab('vars')">Vars</button>
-        <button onclick="showCheatTab('time')">Time</button>
-        <button onclick="showCheatTab('save')">Save</button>
+        <button type="button" onclick="showCheatTab('money')">Money</button>
+        <button type="button" onclick="showCheatTab('items')">Items</button>
+        <button type="button" onclick="showCheatTab('actors')">Actors</button>
+        <button type="button" onclick="showCheatTab('vars')">Vars</button>
+        <button type="button" onclick="showCheatTab('time')">Time</button>
+        <button type="button" onclick="showCheatTab('settings')">Settings</button>
       </div>
       <div id="cheatContent">Choose a tab…</div>
     </div>
 
-    <!-- Virtual ESC button -->
-    <button id="escButton">ESC</button>
+    <!-- Virtual ESC -->
+    <button id="escButton" type="button" title="Back / Cancel (ESC)">ESC</button>
 
     <script>
-      /* Panel open/close */
+      /* ========= Panel open/close ========= */
       (function(){
         const fab   = document.getElementById('cheatFab');
         const panel = document.getElementById('cheatPanel');
         const close = document.getElementById('cheatClose');
-        function openPanel(){ panel.classList.add('open'); fab.style.display='none'; }
-        function closePanel(){ panel.classList.remove('open'); fab.style.display='block'; }
+        function openPanel(){
+          panel.classList.add('open');
+          panel.setAttribute('aria-hidden','false');
+          fab.style.display = 'none';
+        }
+        function closePanel(){
+          panel.classList.remove('open');
+          panel.setAttribute('aria-hidden','true');
+          fab.style.display = 'block';
+        }
         fab.addEventListener('click', openPanel);
         close.addEventListener('click', closePanel);
       })();
 
-      /* Cheat tabs */
+      /* ========= Cheat tabs ========= */
       function showCheatTab(tab){
-        const box=document.getElementById('cheatContent'); box.innerHTML='';
-        try{
-          if(tab==='money') return buildMoneyEditor(box);
-          if(tab==='items') return buildItemEditor(box);
-          if(tab==='actors')return buildActorEditor(box);
-          if(tab==='vars')  return buildVarEditor(box);
-          if(tab==='time')  return buildTimeEditor(box);
-          if(tab==='save')  return buildSaveEditor(box);
-        }catch(e){ box.textContent='Game not loaded yet.'; }
+        const box = document.getElementById('cheatContent');
+        box.innerHTML = '';
+        try {
+          if (tab === 'money')    return buildMoneyEditor(box);
+          if (tab === 'items')    return buildItemEditor(box);
+          if (tab === 'actors')   return buildActorEditor(box);
+          if (tab === 'vars')     return buildVarEditor(box);
+          if (tab === 'time')     return buildTimeEditor(box);
+          if (tab === 'settings') return buildSettingsEditor(box);
+        } catch (e) {
+          box.textContent = 'Game not fully loaded yet.';
+        }
       }
 
-      /* Money */
-      function buildMoneyEditor(c){
-        if(!window.$gameParty){c.textContent='Game not loaded.';return;}
-        const g=$gameParty.gold();
-        c.innerHTML=`<label>Money</label><input type="number" id="cheat-money" value="${g}">
-                     <button onclick="setMoney()">Set</button>`;
+      /* ========= Money ========= */
+      function buildMoneyEditor(container){
+        if (!window.$gameParty) { container.textContent='Game not loaded yet.'; return; }
+        const gold=$gameParty.gold ? $gameParty.gold() : 0;
+        const row=document.createElement('div');
+        row.className='row';
+        row.innerHTML=`<label>Money</label>
+          <input type="number" id="cheat-money" value="${gold}" min="0">
+          <button onclick="setMoney()">Set</button>`;
+        container.appendChild(row);
       }
       function setMoney(){
-        const v=parseInt(document.getElementById('cheat-money').value,10);
-        if(!isNaN(v)) $gameParty._gold=v;
+        const input=document.getElementById('cheat-money');
+        if (!input) return;
+        const val=parseInt(input.value,10);
+        if (!isNaN(val)&&window.$gameParty){ $gameParty._gold=val; }
       }
 
-      /* Items */
-      function buildItemEditor(c){
-        if(!$dataItems||!$gameParty){c.textContent='Game not loaded.';return;}
-        $dataItems.forEach(it=>{
-          if(it){
+      /* ========= Items ========= */
+      function buildItemEditor(container){
+        if (!window.$dataItems||!window.$gameParty){ container.textContent='Game not loaded yet.'; return; }
+        window.$dataItems.forEach(item=>{
+          if(item){
             const row=document.createElement('div');
-            row.innerHTML=`<label>${it.name}</label>
-              <input type="number" id="cheat-item-${it.id}" value="${$gameParty.numItems(it)}">
-              <button onclick="setItem(${it.id})">Set</button>`;
-            c.appendChild(row);
+            row.className='row';
+            row.innerHTML=`<label>${item.name}</label>
+              <input type="number" id="cheat-item-${item.id}" value="${$gameParty.numItems(item)}" min="0">
+              <button onclick="setItem(${item.id})">Set</button>`;
+            container.appendChild(row);
           }
         });
       }
       function setItem(id){
-        const v=parseInt(document.getElementById('cheat-item-'+id).value,10);
-        if(isNaN(v))return;
-        const it=$dataItems[id], cur=$gameParty.numItems(it);
-        $gameParty.gainItem(it,v-cur);
+        const input=document.getElementById('cheat-item-'+id);
+        if (!input) return;
+        const val=parseInt(input.value,10);
+        if(isNaN(val)) return;
+        const item=$dataItems[id];
+        const cur=$gameParty.numItems(item);
+        $gameParty.gainItem(item,val-cur);
       }
 
-      /* Actors */
-      function buildActorEditor(c){
-        if(!$gameActors||!$gameParty){c.textContent='Game not loaded.';return;}
-        $gameParty.members().forEach(a=>{
-          const id=a.actorId(),b=document.createElement('div');
-          b.innerHTML=`<b>${a.name()}</b><br>
-            <label>HP:</label><input type="number" id="hp-${id}" value="${a.hp}">
+      /* ========= Actors ========= */
+      function buildActorEditor(container){
+        if (!window.$gameActors||!$gameParty){ container.textContent='Game not loaded yet.'; return; }
+        $gameParty.members().forEach(actor=>{
+          const id=actor.actorId();
+          const block=document.createElement('div');
+          block.innerHTML=`
+            <b>${actor.name()}</b><br>
+            <label>HP:</label><input type="number" id="hp-${id}" value="${actor.hp}">
             <button onclick="setActorHP(${id})">Set</button><br>
-            <label>MP:</label><input type="number" id="mp-${id}" value="${a.mp}">
+            <label>MP:</label><input type="number" id="mp-${id}" value="${actor.mp}">
             <button onclick="setActorMP(${id})">Set</button><br>
-            <label>Level:</label><input type="number" id="lv-${id}" value="${a.level}">
-            <button onclick="setActorLV(${id})">Set</button><hr>`;
-          c.appendChild(b);
+            <label>Level:</label><input type="number" id="lv-${id}" value="${actor.level}">
+            <button onclick="setActorLV(${id})">Set</button>
+            <hr>`;
+          container.appendChild(block);
         });
       }
-      function setActorHP(id){const a=$gameActors.actor(id);const v=parseInt(document.getElementById('hp-'+id).value,10);if(!isNaN(v))a.setHp(v);}
-      function setActorMP(id){const a=$gameActors.actor(id);const v=parseInt(document.getElementById('mp-'+id).value,10);if(!isNaN(v))a.setMp(v);}
-      function setActorLV(id){const a=$gameActors.actor(id);const v=parseInt(document.getElementById('lv-'+id).value,10);if(!isNaN(v))a.changeLevel(v,false);}
+      function setActorHP(id){ const a=$gameActors.actor(id); const v=parseInt(document.getElementById('hp-'+id).value,10); if(!isNaN(v)) a.setHp(v); }
+      function setActorMP(id){ const a=$gameActors.actor(id); const v=parseInt(document.getElementById('mp-'+id).value,10); if(!isNaN(v)) a.setMp(v); }
+      function setActorLV(id){ const a=$gameActors.actor(id); const v=parseInt(document.getElementById('lv-'+id).value,10); if(!isNaN(v)) a.changeLevel(v,false); }
 
-      /* Vars */
-      function buildVarEditor(c){
-        if(!$gameVariables||!$gameSwitches){c.textContent='Game not loaded.';return;}
+      /* ========= Vars ========= */
+      function buildVarEditor(container){
+        if(!window.$gameVariables||!window.$gameSwitches){ container.textContent='Game not loaded yet.'; return; }
+        const varsTitle=document.createElement('h3'); varsTitle.textContent='Variables'; container.appendChild(varsTitle);
         for(let i=1;i<=10;i++){
-          const r=document.createElement('div');
-          r.innerHTML=`<label>Var ${i}</label><input type="number" id="var-${i}" value="${$gameVariables.value(i)}">
+          const row=document.createElement('div'); row.className='row';
+          row.innerHTML=`<label>Var ${i}</label>
+            <input type="number" id="var-${i}" value="${$gameVariables.value(i)}">
             <button onclick="setVar(${i})">Set</button>`;
-          c.appendChild(r);
+          container.appendChild(row);
         }
+        const swTitle=document.createElement('h3'); swTitle.textContent='Switches'; container.appendChild(swTitle);
         for(let i=1;i<=10;i++){
-          const r=document.createElement('div');
-          r.innerHTML=`<label>Switch ${i}</label><input type="checkbox" id="sw-${i}" ${$gameSwitches.value(i)?'checked':''} onchange="setSwitch(${i})">`;
-          c.appendChild(r);
+          const row=document.createElement('div'); row.className='row';
+          row.innerHTML=`<label>Switch ${i}</label>
+            <input type="checkbox" id="sw-${i}" ${$gameSwitches.value(i)?'checked':''} onchange="setSwitch(${i})">`;
+          container.appendChild(row);
         }
       }
-      function setVar(i){const v=parseInt(document.getElementById('var-'+i).value,10);if(!isNaN(v))$gameVariables.setValue(i,v);}
-      function setSwitch(i){$gameSwitches.setValue(i,document.getElementById('sw-'+i).checked);}
+      function setVar(i){ const v=parseInt(document.getElementById('var-'+i).value,10); if(!isNaN(v)) $gameVariables.setValue(i,v); }
+      function setSwitch(i){ const v=document.getElementById('sw-'+i).checked; $gameSwitches.setValue(i,v); }
 
-      /* Time */
-      function buildTimeEditor(c){
-        if(!$gameVariables){c.textContent='Game not loaded.';return;}
-        let hourId=null, minId=null;
-        for(let i=1;i<=200;i++){const v=$gameVariables.value(i);if(v>=0&&v<=24){hourId=i;}if(v>=0&&v<=60){minId=i;}}
-        if(!hourId||!minId){c.textContent='Time vars not auto-detected.';return;}
-        c.innerHTML=`<label>Hour</label><input type="number" id="time-hour" value="${$gameVariables.value(hourId)}">
-                     <button onclick="setHour(${hourId})">Set</button><br>
-                     <label>Minute</label><input type="number" id="time-min" value="${$gameVariables.value(minId)}">
-                     <button onclick="setMinute(${minId})">Set</button>`;
+      /* ========= Time ========= */
+      function buildTimeEditor(container){
+        let hour,minute,day;
+        if($gameSystem&&typeof $gameSystem._timeHour!=="undefined"){
+          hour=$gameSystem._timeHour; minute=$gameSystem._timeMinute; day=$gameSystem._timeDay||1;
+        }else if($gameVariables){
+          // naive scan for hour/minute vars
+          for(let i=1;i<=20;i++){
+            const val=$gameVariables.value(i);
+            if(val>=0&&val<=24&&hour==null) hourVar=i,hour=val;
+            if(val>=0&&val<=60&&minute==null) minuteVar=i,minute=val;
+          }
+          day=$gameVariables.value(3)||1;
+        }
+        if(hour==null||minute==null){ container.textContent='This game does not expose detectable time vars.'; return; }
+        container.innerHTML=`
+          <div class="row"><label>Hour</label><input type="number" id="cheat-hour" value="${hour}" min="0" max="23"></div>
+          <div class="row"><label>Minute</label><input type="number" id="cheat-minute" value="${minute}" min="0" max="59"></div>
+          <div class="row"><label>Day</label><input type="number" id="cheat-day" value="${day}" min="1"></div>
+          <div class="row"><button onclick="setGameTime()">Apply Time</button></div>`;
       }
-      function setHour(id){const v=parseInt(document.getElementById('time-hour').value,10);if(!isNaN(v))$gameVariables.setValue(id,v);}
-      function setMinute(id){const v=parseInt(document.getElementById('time-min').value,10);if(!isNaN(v))$gameVariables.setValue(id,v);}
+      function setGameTime(){
+        const hour=parseInt(document.getElementById('cheat-hour').value,10);
+        const minute=parseInt(document.getElementById('cheat-minute').value,10);
+        const day=parseInt(document.getElementById('cheat-day').value,10);
+        if($gameSystem&&typeof $gameSystem._timeHour!=="undefined"){
+          if(!isNaN(hour)) $gameSystem._timeHour=hour;
+          if(!isNaN(minute)) $gameSystem._timeMinute=minute;
+          if(!isNaN(day)) $gameSystem._timeDay=day;
+        }else if($gameVariables){
+          if(typeof hourVar!=="undefined"&&!isNaN(hour)) $gameVariables.setValue(hourVar,hour);
+          if(typeof minuteVar!=="undefined"&&!isNaN(minute)) $gameVariables.setValue(minuteVar,minute);
+          if(!isNaN(day)) $gameVariables.setValue(3,day);
+        }
+      }
 
-      /* Save */
-      let autoSaveTimer=null;
-      function buildSaveEditor(c){
-        c.innerHTML=`<label>Auto-save:</label><input type="checkbox" id="autoSaveToggle"><br>
-          <label>Interval</label>
-          <select id="autoSaveInterval">
-            <option value="5">5 min</option><option value="10">10 min</option>
-            <option value="15">15 min</option><option value="20">20 min</option>
-          </select><br>
-          <button onclick="forceSave()">Save Now</button>
-          <button onclick="forceLoad()">Load Now</button>`;
-        document.getElementById('autoSaveToggle').addEventListener('change',function(){
-          if(this.checked){startAutoSave();}else{stopAutoSave();}
-        });
+      /* ========= Settings ========= */
+      let autosaveTimer=null;
+      function buildSettingsEditor(container){
+        container.innerHTML=`
+          <div class="row">
+            <label>Auto-save interval (min)</label>
+            <input type="number" id="autosaveInterval" value="0" min="0">
+            <button onclick="applyAutosave()">Apply</button>
+          </div>
+          <div class="row">
+            <button onclick="forceOpenSave()">Save Now</button>
+            <button onclick="forceOpenLoad()">Load Now</button>
+          </div>`;
       }
-      function startAutoSave(){
-        stopAutoSave();
-        const mins=parseInt(document.getElementById('autoSaveInterval').value,10);
-        autoSaveTimer=setInterval(forceSave,mins*60000);
+      function applyAutosave(){
+        const minutes=parseInt(document.getElementById('autosaveInterval').value,10);
+        if(autosaveTimer) clearInterval(autosaveTimer);
+        if(!isNaN(minutes)&&minutes>0){
+          autosaveTimer=setInterval(()=>{
+            if(DataManager&&DataManager.saveGame){
+              DataManager.saveGame(1);
+              console.log('Auto-saved slot 1');
+            }
+          },minutes*60*1000);
+        }
       }
-      function stopAutoSave(){if(autoSaveTimer){clearInterval(autoSaveTimer);autoSaveTimer=null;}}
-      function forceSave(){try{if(DataManager.saveGame)$gameSystem.onBeforeSave();DataManager.saveGame(1);}catch(e){}}
-      function forceLoad(){try{if(DataManager.loadGame)DataManager.loadGame(1).then(()=>Scene_Load.prototype.reloadMapIfUpdated());}catch(e){}}
+      function forceOpenSave(){ SceneManager.push(Scene_Save); }
+      function forceOpenLoad(){ SceneManager.push(Scene_Load); }
 
-      /* ESC button (true cancel/back) */
+      /* ========= ESC button (single press/release) ========= */
       (function(){
         const btn=document.getElementById('escButton');
         function sendEsc(){
           try{
-            const ev=new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true});
-            Object.defineProperty(ev,'keyCode',{get:()=>27});
-            document.dispatchEvent(ev);
+            const evDown=new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true});
+            Object.defineProperty(evDown,'keyCode',{get:()=>27});
+            document.dispatchEvent(evDown);
+            setTimeout(()=>{
+              const evUp=new KeyboardEvent('keyup',{key:'Escape',code:'Escape',bubbles:true});
+              Object.defineProperty(evUp,'keyCode',{get:()=>27});
+              document.dispatchEvent(evUp);
+            },30);
           }catch(e){}
         }
         btn.addEventListener('click',sendEsc);
