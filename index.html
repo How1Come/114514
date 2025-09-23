@@ -7,18 +7,19 @@
     <!-- keep the old Apple ones for iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="viewport" content="user-scalable=no">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0">
     <link rel="icon" href="icon/icon.png" type="image/png">
     <link rel="apple-touch-icon" href="icon/icon.png">
     <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
     <title>冬日狂想曲 v1.02</title>
+
     <style>
       /* ===== Cheat sidebar ===== */
       #cheatPanel {
         position: fixed;
         top: 0;
-        right: -360px;        /* hidden */
-        width: 360px;
+        right: -380px;
+        width: 380px;
         height: 100%;
         background: rgba(17,17,17,.98);
         color: #fff;
@@ -30,10 +31,11 @@
         font-family: Arial, sans-serif;
         font-size: 14px;
         -webkit-overflow-scrolling: touch;
+        border-left: 1px solid rgba(255,255,255,.04);
       }
       #cheatPanel.open { right: 0; }
       #cheatPanel h2 {
-        margin: 8px 0 10px 0;
+        margin: 8px 0 10px;
         font-size: 16px;
         border-bottom: 1px solid #444;
         padding-bottom: 6px;
@@ -50,7 +52,7 @@
         margin-bottom: 8px;
         cursor: pointer;
       }
-      #cheatTabs { margin-bottom:10px; }
+      #cheatTabs { margin-bottom:10px; display:flex; flex-wrap:wrap; gap:8px; }
       #cheatTabs button {
         margin-right: 6px;
         margin-bottom: 6px;
@@ -60,15 +62,15 @@
         border-radius: 6px;
         padding: 6px 10px;
         cursor: pointer;
+        font-size:13px;
       }
-      #cheatPanel label { display:inline-block; width:140px; vertical-align: middle; }
-      #cheatPanel input[type="number"], #cheatPanel select { width:100px; margin-right:6px; vertical-align: middle; }
-      #cheatPanel .row { margin: 8px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+      #cheatPanel label { display:inline-block; width:120px; vertical-align:middle; }
+      #cheatPanel input[type="number"], #cheatPanel input[type="text"], #cheatPanel select { width:120px; margin-right:6px; padding:4px; box-sizing:border-box; vertical-align:middle; }
+      #cheatPanel .row { margin: 8px 0; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
       #cheatPanel hr { border: 0; border-top: 1px solid #333; margin: 8px 0; }
+      #cheatPanel .sub { color:#bbb; font-size:12px; margin-top:6px; }
 
-      #cheatPanel .small { font-size:12px; color:#cfcfcf; }
-
-      /* Floating open button that’s visible when the panel is closed */
+      /* Floating open button */
       #cheatFab {
         position: fixed;
         right: 12px;
@@ -88,7 +90,7 @@
         user-select: none;
       }
 
-      /* ===== Virtual ESC button (fixed at left corner) ===== */
+      /* Virtual ESC button (fixed at left corner) */
       #escButton {
         position: fixed;
         left: 12px;
@@ -105,24 +107,27 @@
         cursor: pointer;
         user-select: none;
         touch-action: manipulation;
+        display: flex;
+        align-items:center;
+        justify-content:center;
         box-shadow: 0 2px 10px rgba(0,0,0,.35);
       }
 
-      /* basic buttons */
-      .cheat-btn {
-        background:#2b2b2b; color:#fff; border:1px solid #444; padding:6px 8px; border-radius:6px; cursor:pointer;
-      }
-      .cheat-btn.small { padding:4px 6px; font-size:13px; }
+      /* small helper */
+      .btn { background:#2c2c2c;border:1px solid #555;padding:6px 10px;border-radius:6px;color:#fff;cursor:pointer }
+      .btn.small { padding:4px 8px; font-size:13px }
+      .muted { color:#9aa; font-size:13px }
+      .status { font-size:13px; margin-top:8px; color:#9df; }
+      .danger { color:#f88; }
+      .ok { color:#8f8; }
 
-      .var-row, .switch-row { display:flex; align-items:center; gap:8px; margin:6px 0; flex-wrap:wrap; }
-
-      /* Make sure overlays never block pointer events to the game except on their own surface */
+      /* ensure overlays only handle their pointer area */
       #cheatPanel, #cheatFab, #escButton { pointer-events: auto; }
-      canvas, body { touch-action: manipulation; }
+      canvas, body { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
     </style>
   </head>
   <body style="background-color: black">
-    <!-- RPG Maker MV core files (your original ordering preserved) -->
+    <!-- RPG Maker MV core files (keep your originals) -->
     <script src="js/libs/pixi.js"></script>
     <script src="js/libs/pixi-tilemap.js"></script>
     <script src="js/libs/pixi-picture.js"></script>
@@ -143,77 +148,38 @@
 
     <!-- Cheat panel -->
     <div id="cheatPanel" aria-hidden="true">
-      <button id="cheatClose">Close</button>
+      <button id="cheatClose" class="btn small">Close</button>
       <h2>Cheat Menu</h2>
-      <div id="cheatTabs">
+      <div id="cheatTabs" aria-hidden="false">
         <button type="button" onclick="showCheatTab('money')">Money</button>
         <button type="button" onclick="showCheatTab('items')">Items</button>
         <button type="button" onclick="showCheatTab('actors')">Actors</button>
         <button type="button" onclick="showCheatTab('time')">Time</button>
-        <button type="button" onclick="showCheatTab('vars')">Vars & Switches</button>
+        <button type="button" onclick="showCheatTab('vars')">Vars</button>
+        <button type="button" onclick="showCheatTab('settings')">Settings</button>
       </div>
-      <div id="cheatContent" class="small">Choose a tab…</div>
+
+      <div id="cheatContent" class="muted">Choose a tab…</div>
     </div>
 
     <!-- Virtual ESC (opens menu reliably on mobile) -->
     <button id="escButton" type="button" title="Open menu (ESC)">ESC</button>
 
     <script>
-    /*************************************************************************
-     * Cheat Panel Implementation
-     *
-     * - Uses existing RPG Maker MV/MZ globals when available:
-     *    $gameParty, $dataItems, $gameActors, $gameVariables, $gameSwitches, DataManager, SceneManager, Scene_Save, Scene_Load
-     *
-     * - Auto-save uses DataManager.saveGame(savefileId) where supported.
-     *
-     * - Vars tab lists from $dataSystem.variables (names) and allows editing any ID.
-     *
-     * - Switches tab lists from $dataSystem.switches.
-     *
-     * - ESC button triggers push to Scene_Menu on map scene; debounced so single press only.
-     *************************************************************************/
-
-    ;(function(){
-
-      /* ===== Small helpers ===== */
-      function $(id){ return document.getElementById(id); }
-      function el(tag, attrs){ const e = document.createElement(tag); if (attrs) Object.assign(e, attrs); return e; }
-      function whenGameReady(fn){
-        // try to run soon; if not ready, poll up to a few seconds
-        const max = 4000, step = 200;
-        let waited = 0;
-        (function tryNow(){
-          try {
-            if (window.SceneManager && window.$gameParty && window.$dataSystem) {
-              fn();
-            } else {
-              if (waited >= max) {
-                // still allow calling fn: it'll need to guard checks itself
-                fn();
-              } else {
-                waited += step;
-                setTimeout(tryNow, step);
-              }
-            }
-          } catch(e){
-            if (waited >= max) fn();
-            else { waited += step; setTimeout(tryNow, step); }
-          }
-        })();
-      }
-
-      /* ========= Panel open/close ========= */
-      const fab   = $('cheatFab');
-      const panel = $('cheatPanel');
-      const close = $('cheatClose');
+    (function(){
+      // ---------- Panel open/close ----------
+      const fab   = document.getElementById('cheatFab');
+      const panel = document.getElementById('cheatPanel');
+      const close = document.getElementById('cheatClose');
+      const content = document.getElementById('cheatContent');
 
       function openPanel(){
         panel.classList.add('open');
         panel.setAttribute('aria-hidden','false');
         fab.style.display = 'none';
-        // refresh current tab content if open
-        if (panel._currentTab) showCheatTab(panel._currentTab);
+        // refresh active tab content if already open
+        const displayed = panel.dataset.tab || 'money';
+        showCheatTab(displayed);
       }
       function closePanel(){
         panel.classList.remove('open');
@@ -222,467 +188,587 @@
       }
       fab.addEventListener('click', openPanel);
       close.addEventListener('click', closePanel);
-
-      // Expose for console tests
       window.__cheatPanelOpen = openPanel;
       window.__cheatPanelClose = closePanel;
 
-      /* ========= Tab switching ========= */
-      window.showCheatTab = function(tab){
-        panel._currentTab = tab;
-        const box = $('cheatContent');
-        box.innerHTML = '';
-        // small helper to guard if game not loaded
+      // ---------- helper utils ----------
+      function el(t, html){ const d = document.createElement(t); if(html) d.innerHTML = html; return d; }
+      function safeGet(obj, path, def){ try{ return path.split('.').reduce((a,b)=>a&&a[b], obj); }catch(e){return def;} }
+      function now(){ return (new Date()).toLocaleTimeString(); }
+
+      // ---------- state for auto-save ----------
+      let autosaveTimer = null;
+      let autosaveEnabled = false;
+      let autosaveIntervalMs = 5 * 60 * 1000; // default 5min when enabled (but starts OFF)
+      let autosaveSlot = 1;
+
+      function enableAutosave(enabled){
+        autosaveEnabled = !!enabled;
+        if(autosaveTimer) { clearInterval(autosaveTimer); autosaveTimer = null; }
+        if(autosaveEnabled){
+          autosaveTimer = setInterval(()=> {
+            try {
+              doSave(autosaveSlot, true);
+            } catch(e) { console.warn('Auto-save failed', e); }
+          }, autosaveIntervalMs);
+        }
+        renderSettingsStatus();
+      }
+
+      function renderSettingsStatus(){
+        const s = document.getElementById('settingsStatus');
+        if(!s) return;
+        if(autosaveEnabled) s.textContent = `Auto-save: every ${autosaveIntervalMs/60000} min (slot ${autosaveSlot})`;
+        else s.textContent = `Auto-save: OFF`;
+      }
+
+      // ---------- Save / Load helpers ----------
+      async function doSave(slot, silent){
+        if(!window.DataManager || typeof DataManager.saveGame !== 'function'){
+          alert('Save function not available in this environment.');
+          return;
+        }
+        slot = Number(slot) || 1;
         try {
-          if (tab === 'money') return buildMoneyEditor(box);
-          if (tab === 'items') return buildItemEditor(box);
-          if (tab === 'actors') return buildActorEditor(box);
-          if (tab === 'time') return buildTimeEditor(box);
-          if (tab === 'vars') return buildVarSwitchEditor(box);
-        } catch (e) {
-          console.error('Cheat tab error', e);
-          box.textContent = 'Game not fully loaded yet.';
+          if(!silent) console.log('Saving to slot', slot);
+          const ok = await DataManager.saveGame(slot);
+          if(!silent) alert(ok ? `Saved slot ${slot}` : `Save failed`);
+          // update UI if needed
+        } catch(e){
+          console.error('Save error', e);
+          alert('Save failed: '+(e && e.message ? e.message : e));
+        }
+      }
+
+      async function doLoad(slot){
+        if(!window.DataManager || typeof DataManager.loadGame !== 'function'){
+          alert('Load function not available in this environment.');
+          return;
+        }
+        slot = Number(slot) || 1;
+        try {
+          const ok = await DataManager.loadGame(slot);
+          if(ok) {
+            // Many games will refresh internal state after load, attempt an in-page refresh
+            if(window.SceneManager && typeof SceneManager.reload === 'function') {
+              SceneManager.reload();
+            } else {
+              // fallback: reload the page
+              location.reload();
+            }
+          } else {
+            alert('Load failed (no saved data).');
+          }
+        } catch(e){
+          console.error('Load error', e);
+          alert('Load failed: '+(e && e.message ? e.message : e));
+        }
+      }
+
+      // ---------- Tab rendering ----------
+      window.showCheatTab = function(tab){
+        panel.dataset.tab = tab;
+        content.innerHTML = '';
+        try {
+          if(tab === 'money') return renderMoneyTab(content);
+          if(tab === 'items') return renderItemsTab(content);
+          if(tab === 'actors') return renderActorsTab(content);
+          if(tab === 'time') return renderTimeTab(content);
+          if(tab === 'vars') return renderVarsTab(content);
+          if(tab === 'settings') return renderSettingsTab(content);
+        } catch(e) {
+          content.textContent = 'Error rendering tab: ' + e.message;
+          console.error(e);
         }
       };
 
-      /* ================= Money ================= */
-      function buildMoneyEditor(container){
-        const title = el('div'); title.className='row'; title.innerHTML = '<strong>Money editor</strong>';
-        container.appendChild(title);
+      // ---------- Money ----------
+      function renderMoneyTab(container){
+        const wrapper = el('div');
+        if(!window.$gameParty){
+          wrapper.textContent = 'Game not loaded yet.';
+          container.appendChild(wrapper);
+          return;
+        }
+        const gold = (typeof $gameParty.gold === 'function') ? $gameParty.gold() : ($gameParty._gold || 0);
+        const row = el('div','','');
+        row.className = 'row';
+        row.innerHTML =
+          `<label>Money</label>
+           <input type="number" id="cheat-money" value="${gold}" min="0">
+           <button class="btn small" id="btn-set-money">Set</button>
+           <button class="btn small" id="btn-add-money">+1000</button>`;
+        wrapper.appendChild(row);
+        container.appendChild(wrapper);
 
-        const info = el('div'); info.className='small row'; info.textContent = 'Change party money (gold).';
-        container.appendChild(info);
-
-        const row = el('div'); row.className='row';
-        const label = el('label'); label.textContent = 'Money';
-        const input = el('input'); input.type = 'number'; input.id='cheat-money'; input.min='0'; input.value = (window.$gameParty && $gameParty.gold)? String($gameParty.gold()) : '0';
-        const setBtn = el('button'); setBtn.className='cheat-btn'; setBtn.textContent='Set';
-        setBtn.onclick = setMoney;
-        row.appendChild(label); row.appendChild(input); row.appendChild(setBtn);
-        container.appendChild(row);
-
-        container.appendChild(el('hr'));
-        // Save/load quick controls for convenience
-        const row2 = el('div'); row2.className='row';
-        const slotSelect = el('select'); slotSelect.id='cheat-slot-select';
-        for (let i=1;i<=10;i++){ const o = el('option'); o.value=i; o.textContent='Slot '+i; slotSelect.appendChild(o); }
-        const saveBtn = el('button'); saveBtn.className='cheat-btn'; saveBtn.textContent='Save Now';
-        saveBtn.onclick = ()=> forceSave(parseInt(slotSelect.value,10));
-        const loadBtn = el('button'); loadBtn.className='cheat-btn'; loadBtn.textContent='Load (open)';
-        loadBtn.onclick = ()=> forceLoad(parseInt(slotSelect.value,10));
-        row2.appendChild(slotSelect); row2.appendChild(saveBtn); row2.appendChild(loadBtn);
-        container.appendChild(row2);
-
-        // Autosave controls
-        container.appendChild(el('hr'));
-        const autosaveRow = el('div'); autosaveRow.className='row';
-        const autosaveLabel = el('label'); autosaveLabel.textContent='Auto-save (min)';
-        const autosaveSelect = el('select'); autosaveSelect.id='cheat-autosave-interval';
-        [0,5,10,15,20,30].forEach(v=>{ const o=el('option'); o.value=v; o.textContent=v+' min'; autosaveSelect.appendChild(o); });
-        autosaveSelect.value = 0; // off by default
-        const autosaveToggle = el('button'); autosaveToggle.className='cheat-btn'; autosaveToggle.textContent='Start Auto-save';
-        autosaveToggle.onclick = toggleAutoSave;
-        autosaveRow.appendChild(autosaveLabel); autosaveRow.appendChild(autosaveSelect); autosaveRow.appendChild(autosaveToggle);
-        container.appendChild(autosaveRow);
-
-        // show current party gold realtime
-        const live = el('div'); live.className='small'; live.id='cheat-money-live';
-        live.textContent = 'Current gold: ' + ((window.$gameParty && $gameParty.gold)? $gameParty.gold() : 'n/a');
-        container.appendChild(live);
-
-        // update live every 2s while panel open
-        let liveInterval = setInterval(()=> {
-          if (panel.classList.contains('open')) {
-            const g = (window.$gameParty && $gameParty.gold)? $gameParty.gold() : 'n/a';
-            const node = $('cheat-money-live'); if(node) node.textContent = 'Current gold: ' + g;
-            const inp = $('cheat-money'); if(inp && window.$gameParty && $gameParty.gold) inp.value = String($gameParty.gold());
-          } else {
-            clearInterval(liveInterval);
+        wrapper.querySelector('#btn-set-money').addEventListener('click', ()=>{
+          const v = parseInt(document.getElementById('cheat-money').value,10);
+          if(!isNaN(v) && window.$gameParty) {
+            // prefer API if exists
+            if(typeof $gameParty._gold !== 'undefined') {
+              $gameParty._gold = v;
+            }
+            if(typeof $gameParty.gainGold === 'function') {
+              // set by difference
+              const cur = (typeof $gameParty.gold === 'function') ? $gameParty.gold() : ($gameParty._gold||0);
+              $gameParty.gainGold(v - cur);
+            }
+            alert('Money set to '+v);
           }
-        }, 2000);
-      }
-
-      function setMoney(){
-        const input = $('cheat-money'); if(!input) return;
-        const v = parseInt(input.value,10); if (isNaN(v)) return;
-        if (window.$gameParty) {
-          // prefer using gain/loss so related systems update cleanly
-          if (typeof $gameParty.gainGold === 'function' && typeof $gameParty.gold === 'function') {
-            const cur = $gameParty.gold();
-            const diff = v - cur;
-            $gameParty.gainGold(diff);
-          } else {
-            // fallback
-            try { $gameParty._gold = v; if ($gameParty.refresh) $gameParty.refresh(); } catch(e){ console.warn(e); }
+        });
+        wrapper.querySelector('#btn-add-money').addEventListener('click', ()=>{
+          if(!window.$gameParty) return;
+          if(typeof $gameParty.gainGold === 'function'){
+            $gameParty.gainGold(1000);
+          } else if(typeof $gameParty._gold !== 'undefined'){
+            $gameParty._gold = ($gameParty._gold || 0) + 1000;
           }
-          // update display
-          const live = $('cheat-money-live'); if (live) live.textContent = 'Current gold: ' + ($gameParty.gold ? $gameParty.gold() : v);
-        }
+          const newv = (typeof $gameParty.gold==='function') ? $gameParty.gold() : ($gameParty._gold||0);
+          document.getElementById('cheat-money').value = newv;
+          alert('Added 1000. Now '+newv);
+        });
       }
 
-      /* ========= Save / Load helpers ========= */
-      let _autoSaveTimer = null;
-      function toggleAutoSave(){
-        const btn = this;
-        const select = $('cheat-autosave-interval');
-        const minutes = parseInt(select.value,10);
-        if (_autoSaveTimer) {
-          clearInterval(_autoSaveTimer); _autoSaveTimer = null;
-          btn.textContent = 'Start Auto-save';
-          badgeMsg('Auto-save stopped');
+      // ---------- Items ----------
+      function renderItemsTab(container){
+        const wrapper = el('div');
+        if(!window.$dataItems || !window.$gameParty){
+          wrapper.textContent = 'Game not loaded yet.';
+          container.appendChild(wrapper);
           return;
         }
-        if (!minutes || minutes <= 0) { alert('Select an interval > 0 to enable auto-save'); return; }
-        const slot = parseInt($('cheat-slot-select').value,10) || 1;
-        _autoSaveTimer = setInterval(()=> {
-          forceSave(slot);
-        }, minutes * 60 * 1000);
-        btn.textContent = 'Stop Auto-save';
-        badgeMsg('Auto-save started: every ' + minutes + ' min (slot ' + slot + ')');
+        // list items with small name + set control
+        window.$dataItems.forEach(item=>{
+          if(!item) return;
+          const id = item.id;
+          const count = $gameParty.numItems ? $gameParty.numItems(item) : 0;
+          const row = el('div');
+          row.className = 'row';
+          row.innerHTML =
+            `<label style="width:160px">${escapeHtml(item.name || ('Item '+id))}</label>
+             <input type="number" id="cheat-item-${id}" value="${count}" min="0">
+             <button class="btn small" data-id="${id}">Set</button>`;
+          wrapper.appendChild(row);
+        });
+        container.appendChild(wrapper);
+        // attach handlers (delegation)
+        wrapper.addEventListener('click', (ev)=>{
+          const b = ev.target.closest('button[data-id]');
+          if(!b) return;
+          const id = Number(b.dataset.id);
+          const input = document.getElementById('cheat-item-'+id);
+          const v = parseInt(input.value,10);
+          if(isNaN(v)) return;
+          const item = $dataItems[id];
+          const cur = $gameParty.numItems(item);
+          $gameParty.gainItem(item, v - cur);
+          alert('Item '+(item.name||id)+' set to '+v);
+        });
       }
 
-      function forceSave(slot){
-        // slot is 1..n; DataManager.saveGame expects slotId. MV/MZ details vary; try DataManager.saveGame
-        if (!window.DataManager) { alert('Save unavailable: DataManager missing'); return; }
-        try {
-          const id = Number(slot) || 1;
-          // show a short toast
-          badgeMsg('Saving to slot '+id+'...');
-          // DataManager.saveGame returns a Promise in many MV setups
-          const p = DataManager.saveGame(id).then(()=> badgeMsg('Saved to slot '+id)).catch(err=>{
-            console.warn('Save failed', err);
-            badgeMsg('Save failed: see console');
-          });
-          return p;
-        } catch(e){
-          console.warn(e);
-          try {
-            // fallback: open save scene
-            SceneManager.push(Scene_Save);
-            badgeMsg('Opened Save scene (fallback)');
-          } catch(_){}
-        }
-      }
-      function forceLoad(slot){
-        try {
-          // Open load scene (user still needs to pick slot or implement auto-load which is riskier)
-          SceneManager.push(Scene_Load);
-          badgeMsg('Opened Load scene (choose slot manually)');
-        } catch(e){
-          console.warn(e);
-          alert('Cannot open load scene in this environment.');
-        }
-      }
-
-      function badgeMsg(text){
-        // small in-panel toast area
-        let b = $('cheat-badge');
-        if (!b) { b = el('div'); b.id='cheat-badge'; b.style.marginTop='8px'; b.style.fontSize='13px'; b.className='small'; panel.appendChild(b); }
-        b.textContent = text;
-        setTimeout(()=>{ if (b && b.textContent === text) b.textContent = ''; }, 3000);
-      }
-
-      /* ================= Items ================= */
-      function buildItemEditor(container){
-        if (!window.$dataItems || !window.$gameParty) {
-          container.textContent = 'Game not loaded yet.';
+      // ---------- Actors ----------
+      function renderActorsTab(container){
+        const wrapper = el('div');
+        if(!window.$gameActors || !window.$gameParty){
+          wrapper.textContent = 'Game not loaded yet.';
+          container.appendChild(wrapper);
           return;
         }
-        const title = el('div'); title.className='row'; title.innerHTML = '<strong>Item editor</strong>';
-        container.appendChild(title);
-        container.appendChild(el('div',{className:'small', textContent:'Set counts for any item.'}));
-
-        // show items (limit large lists: paginate or show only existing items)
-        const list = el('div');
-        // show only items with name and skip null
-        for (let i = 1; i < $dataItems.length; i++){
-          const item = $dataItems[i];
-          if (!item) continue;
-          const row = el('div'); row.className='row';
-          const lbl = el('label'); lbl.textContent = (item.name || ('Item '+i));
-          const inp = el('input'); inp.type='number'; inp.min='0'; inp.id = 'cheat-item-'+i;
-          inp.value = String($gameParty.numItems(item) || 0);
-          const btn = el('button'); btn.className='cheat-btn'; btn.textContent='Set';
-          btn.onclick = (function(id){ return function(){ setItem(id); }; })(i);
-          row.appendChild(lbl); row.appendChild(inp); row.appendChild(btn);
-          list.appendChild(row);
-        }
-        container.appendChild(list);
-      }
-      function setItem(id){
-        const input = $('cheat-item-'+id); if (!input) return;
-        const val = parseInt(input.value,10); if (isNaN(val)) return;
-        const item = $dataItems[id];
-        if (!item) return;
-        const cur = $gameParty.numItems(item);
-        $gameParty.gainItem(item, val - cur);
-        badgeMsg(`Item ${id} set to ${val}`);
-      }
-
-      /* ================= Actors ================= */
-      function buildActorEditor(container){
-        if (!window.$gameActors || !$gameParty) {
-          container.textContent = 'Game not loaded yet.';
-          return;
-        }
-        const title = el('div'); title.className='row'; title.innerHTML = '<strong>Actor editor</strong>';
-        container.appendChild(title);
-        container.appendChild(el('div',{className:'small', textContent:'Edit HP/MP/Level for party members.'}));
-
         $gameParty.members().forEach(actor=>{
           const id = actor.actorId();
           const block = el('div');
+          block.style.borderTop = '1px solid rgba(255,255,255,.04)';
+          block.style.paddingTop = '8px';
           block.innerHTML =
-            `<div class="row"><b>${actor.name()}</b></div>
-             <div class="row"><label>HP</label><input type="number" id="hp-${id}" value="${actor.hp}"><button class="cheat-btn" onclick="setActorHP(${id})">Set</button></div>
-             <div class="row"><label>MP</label><input type="number" id="mp-${id}" value="${actor.mp}"><button class="cheat-btn" onclick="setActorMP(${id})">Set</button></div>
-             <div class="row"><label>Level</label><input type="number" id="lv-${id}" value="${actor.level}"><button class="cheat-btn" onclick="setActorLV(${id})">Set</button></div>
-             <hr>`;
-          container.appendChild(block);
+            `<div style="font-weight:700">${escapeHtml(actor.name())}</div>
+             <div class="row"><label>HP</label><input type="number" id="hp-${id}" value="${actor.hp}" min="0"><button class="btn small" data-set-hp="${id}">Set</button></div>
+             <div class="row"><label>MP</label><input type="number" id="mp-${id}" value="${actor.mp}" min="0"><button class="btn small" data-set-mp="${id}">Set</button></div>
+             <div class="row"><label>Level</label><input type="number" id="lv-${id}" value="${actor.level}" min="1"><button class="btn small" data-set-lv="${id}">Set</button></div>`;
+          wrapper.appendChild(block);
+        });
+        container.appendChild(wrapper);
+
+        wrapper.addEventListener('click', (ev)=>{
+          const hpBtn = ev.target.closest('button[data-set-hp]');
+          if(hpBtn){
+            const id = Number(hpBtn.dataset.setHp || hpBtn.getAttribute('data-set-hp'));
+            const val = parseInt(document.getElementById('hp-'+id).value,10);
+            if(!isNaN(val)) { const a = $gameActors.actor(id); if(a) a.setHp(val); alert('HP set'); }
+            return;
+          }
+          const mpBtn = ev.target.closest('button[data-set-mp]');
+          if(mpBtn){
+            const id = Number(mpBtn.dataset.setMp || mpBtn.getAttribute('data-set-mp'));
+            const val = parseInt(document.getElementById('mp-'+id).value,10);
+            if(!isNaN(val)) { const a = $gameActors.actor(id); if(a) a.setMp(val); alert('MP set'); }
+            return;
+          }
+          const lvBtn = ev.target.closest('button[data-set-lv]');
+          if(lvBtn){
+            const id = Number(lvBtn.dataset.setLv || lvBtn.getAttribute('data-set-lv'));
+            const val = parseInt(document.getElementById('lv-'+id).value,10);
+            if(!isNaN(val)) { const a = $gameActors.actor(id); if(a) a.changeLevel(val,false); alert('Level set'); }
+            return;
+          }
         });
       }
-      window.setActorHP = function(id){
-        const a = $gameActors.actor(id);
-        if (!a) return;
-        const v = parseInt(document.getElementById('hp-'+id).value,10);
-        if (!isNaN(v)) a.setHp(v);
-        badgeMsg(`Actor ${id} HP set`);
-      };
-      window.setActorMP = function(id){
-        const a = $gameActors.actor(id);
-        if (!a) return;
-        const v = parseInt(document.getElementById('mp-'+id).value,10);
-        if (!isNaN(v)) a.setMp(v);
-        badgeMsg(`Actor ${id} MP set`);
-      };
-      window.setActorLV = function(id){
-        const a = $gameActors.actor(id);
-        if (!a) return;
-        const v = parseInt(document.getElementById('lv-'+id).value,10);
-        if (!isNaN(v)) a.changeLevel(v,false);
-        badgeMsg(`Actor ${id} Level set`);
+
+      // ---------- Time tab ----------
+      // Default variable IDs (from your notes). Users can edit the var-id inputs to point to game-specific vars.
+      const defaultTimeVarIds = {
+        weekday: 135,
+        month:   137,
+        day:     139,
+        hour:    239,
+        minute:  240
       };
 
-      /* ================= Time editor =================
-         You said your game exposes time in variables:
-           Var 135: weekday
-           Var 137: month (1-digit? 2-digit? you said 137 shows month tens? we'll read from variables)
-           Var 139: day
-           Var 239: hour
-           Var 240: minute
-         We'll read and write those variables. Also provide a generic "detect time vars" helper.
-      */
-      function buildTimeEditor(container){
-        if (!window.$gameVariables) {
-          container.textContent = 'Game not loaded yet.';
+      function renderTimeTab(container){
+        const wrapper = el('div');
+        if(!window.$gameVariables){
+          wrapper.textContent = 'Game not loaded yet.';
+          container.appendChild(wrapper);
           return;
         }
-        container.appendChild(el('div',{className:'row', innerHTML:'<strong>In-game time editor</strong>'}));
-        container.appendChild(el('div',{className:'small', textContent:"Edit the game's time variables. If the values look wrong, choose the correct variable IDs below."}));
+        container.appendChild(el('div','<div class="sub">If displayed values look wrong, change the Var ID to the variable your game uses.</div>'));
 
-        // Pre-filled IDs you gave; user can change them
-        const mapping = [
-          {label:'Weekday', id:135},
-          {label:'Month', id:137},
-          {label:'Day', id:139},
-          {label:'Hour', id:239},
-          {label:'Minute', id:240}
-        ];
-
-        mapping.forEach(m=>{
-          const row = el('div'); row.className='row';
-          const lab = el('label'); lab.textContent = m.label;
-          const idInp = el('input'); idInp.type='number'; idInp.value = m.id; idInp.min = 1; idInp.id = 'time-var-id-'+m.label;
-          const valInp = el('input'); valInp.type='number'; valInp.min = 0; valInp.id = 'time-val-'+m.label;
-          // read initial
-          try {
-            const v = $gameVariables.value(Number(idInp.value));
-            valInp.value = (v !== undefined && v !== null) ? String(v) : '0';
-          } catch(_) { valInp.value = '0'; }
-          const setBtn = el('button'); setBtn.className='cheat-btn'; setBtn.textContent='Set';
-          setBtn.onclick = function(){ setTimeVar(idInp.value, valInp.value, m.label); };
-          const refreshBtn = el('button'); refreshBtn.className='cheat-btn small'; refreshBtn.textContent='Refresh';
-          refreshBtn.onclick = function(){
-            const v = $gameVariables.value(Number(idInp.value)); valInp.value = (v!==undefined?String(v):'0');
-          };
-          row.appendChild(lab); row.appendChild(idInp); row.appendChild(valInp); row.appendChild(setBtn); row.appendChild(refreshBtn);
-          container.appendChild(row);
+        // build a control row for each field: label, var-id input (editable), current value, set input
+        Object.keys(defaultTimeVarIds).forEach(key=>{
+          const vid = defaultTimeVarIds[key];
+          const row = el('div');
+          row.className = 'row';
+          row.innerHTML =
+            `<label style="width:90px">${key.charAt(0).toUpperCase()+key.slice(1)}</label>
+             <input type="number" class="time-var-id" data-key="${key}" value="${vid}" min="1" style="width:70px">
+             <span class="muted">Current:</span>
+             <input type="number" class="time-current" id="time-current-${key}" readonly style="width:80px">
+             <label class="muted" style="width:60px">Set:</label>
+             <input type="number" class="time-set" id="time-set-${key}" style="width:80px">
+             <button class="btn small" data-set-time="${key}">Set</button>`;
+          wrapper.appendChild(row);
         });
 
-        // Add a convenience "apply to game clock" button - many games manage time by variables only; simply setting them is sufficient.
-        const note = el('div'); note.className='small'; note.textContent = 'Note: this tool changes the game variables directly. If the game uses a separate time system, this may not update visual displays until the game refreshes.';
-        container.appendChild(note);
+        // quick helpers: sync now and refresh
+        const toolsRow = el('div');
+        toolsRow.className = 'row';
+        toolsRow.innerHTML =
+          `<button class="btn small" id="time-refresh">Refresh</button>
+           <button class="btn small" id="time-set-all">Apply all</button>
+           <button class="btn small" id="time-reset-defaults">Reset var-ids</button>
+           <div class="sub">Weekday / Month / Day / Hour / Minute</div>`;
+        wrapper.appendChild(toolsRow);
+        container.appendChild(wrapper);
 
-        // Auto-detect variables if possible (search common range)
-        container.appendChild(el('hr'));
-        const detectRow = el('div'); detectRow.className='row';
-        const detectBtn = el('button'); detectBtn.className='cheat-btn'; detectBtn.textContent='Auto-detect time-like variables';
-        detectBtn.onclick = tryDetectTimeVars;
-        detectRow.appendChild(detectBtn);
-        container.appendChild(detectRow);
-      }
-
-      function setTimeVar(id, value, label){
-        const vid = Number(id); const v = parseInt(value,10);
-        if (isNaN(vid) || isNaN(v)) { alert('Bad id or value'); return; }
-        $gameVariables.setValue(vid, v);
-        badgeMsg(label + ' set (var '+vid+') → ' + v);
-      }
-
-      function tryDetectTimeVars(){
-        // heuristics: scan many var IDs and find ones that look like hour (0-23), minute (0-59), day (1-31), month (1-12), weekday (0-6 or 1-7)
-        if (!window.$gameVariables) { alert('No $gameVariables'); return; }
-        const candidates = {};
-        for (let i=1;i<=500;i++){
-          const val = $gameVariables.value(i);
-          if (typeof val === 'number') {
-            if (val >= 0 && val <= 23) candidates.hour = candidates.hour || [];
-            if (val >= 0 && val <= 59) candidates.minute = candidates.minute || [];
-            if (val >= 1 && val <= 31) candidates.day = candidates.day || [];
-            if (val >= 1 && val <= 12) candidates.month = candidates.month || [];
-            if (val >= 0 && val <= 6) candidates.weekday = candidates.weekday || [];
-            // push to relevant arrays
-            if (val >= 0 && val <= 23) candidates.hour.push(i);
-            if (val >= 0 && val <= 59) candidates.minute.push(i);
-            if (val >= 1 && val <= 31) candidates.day.push(i);
-            if (val >= 1 && val <= 12) candidates.month.push(i);
-            if (val >= 0 && val <= 6) candidates.weekday.push(i);
-          }
+        // populate current values
+        function refreshTimeFields(){
+          document.querySelectorAll('.time-var-id').forEach(inp=>{
+            const key = inp.dataset.key;
+            const vid = Number(inp.value) || defaultTimeVarIds[key];
+            const cur = $gameVariables.value(vid);
+            const displayEl = document.getElementById('time-current-'+key);
+            if(displayEl) displayEl.value = (typeof cur !== 'undefined' ? cur : '');
+            // also prefill set input with current value
+            const setEl = document.getElementById('time-set-'+key);
+            if(setEl) setEl.value = (typeof cur !== 'undefined' ? cur : '');
+          });
         }
-        // show a small popup listing first candidates
-        let msg = 'Detected candidates (first few):\n';
-        msg += 'Hour: ' + (candidates.hour? candidates.hour.slice(0,6).join(',') : 'none') + '\n';
-        msg += 'Minute: ' + (candidates.minute? candidates.minute.slice(0,6).join(',') : 'none') + '\n';
-        msg += 'Day: ' + (candidates.day? candidates.day.slice(0,6).join(',') : 'none') + '\n';
-        msg += 'Month: ' + (candidates.month? candidates.month.slice(0,6).join(',') : 'none') + '\n';
-        msg += 'Weekday: ' + (candidates.weekday? candidates.weekday.slice(0,6).join(',') : 'none') + '\n';
-        alert(msg);
-      }
 
-      /* ================= Vars & Switches editor ================= */
-      function buildVarSwitchEditor(container){
-        container.appendChild(el('div',{className:'row', innerHTML:'<strong>Variables & Switches</strong>'}));
-
-        // Vars list
-        const varsBox = el('div');
-        container.appendChild(el('div',{className:'small', textContent:'Variables (from data) — edit inline or choose ID below to edit any variable.)'}));
-        const varsList = el('div'); varsList.id='cheat-vars-list';
-        container.appendChild(varsList);
-
-        // Switches list
-        container.appendChild(el('hr'));
-        container.appendChild(el('div',{className:'small', textContent:'Switches (from data)'}));
-        const swList = el('div'); swList.id='cheat-switches-list';
-        container.appendChild(swList);
-
-        // Arbitrary var edit (user-specified id)
-        container.appendChild(el('hr'));
-        const custom = el('div'); custom.className='row';
-        const lbl = el('label'); lbl.textContent='Edit Var ID';
-        const varId = el('input'); varId.type='number'; varId.id='cheat-custom-varid'; varId.min='1';
-        const varVal = el('input'); varVal.type='number'; varVal.id='cheat-custom-varval';
-        const applyBtn = el('button'); applyBtn.className='cheat-btn'; applyBtn.textContent='Set';
-        applyBtn.onclick = ()=> {
-          const id = Number(varId.value); const v = Number(varVal.value);
-          if (!id || isNaN(v)) { alert('Enter numeric id and value'); return; }
-          $gameVariables.setValue(id, v); badgeMsg(`Var ${id} ← ${v}`);
-          refreshVarList();
-        };
-        const loadBtn = el('button'); loadBtn.className='cheat-btn'; loadBtn.textContent='Refresh';
-        loadBtn.onclick = ()=> { refreshVarList(); };
-        custom.appendChild(lbl); custom.appendChild(varId); custom.appendChild(varVal); custom.appendChild(applyBtn); custom.appendChild(loadBtn);
-        container.appendChild(custom);
-
-        // Arbitrary switch edit
-        const customSw = el('div'); customSw.className='row';
-        const lblSw = el('label'); lblSw.textContent='Edit Switch ID';
-        const swId = el('input'); swId.type='number'; swId.id='cheat-custom-swid'; swId.min='1';
-        const swVal = el('input'); swVal.type='checkbox'; swVal.id='cheat-custom-swval';
-        const applySwBtn = el('button'); applySwBtn.className='cheat-btn'; applySwBtn.textContent='Set';
-        applySwBtn.onclick = ()=> {
-          const id = Number(swId.value); const v = swVal.checked;
-          if (!id) { alert('Enter switch id'); return; }
-          $gameSwitches.setValue(id, v); badgeMsg(`Switch ${id} ← ${v}`);
-          refreshSwitchList();
-        };
-        customSw.appendChild(lblSw); customSw.appendChild(swId); customSw.appendChild(swVal); customSw.appendChild(applySwBtn);
-        container.appendChild(customSw);
-
-        // initial render
-        refreshVarList();
-        refreshSwitchList();
-      }
-
-      function refreshVarList(){
-        const node = $('cheat-vars-list'); if(!node) return;
-        node.innerHTML = '';
-        try {
-          const names = (window.$dataSystem && $dataSystem.variables) ? $dataSystem.variables : [];
-          const maxShow = Math.max(200, names.length); // show first N to be useful
-          for (let i = 1; i <= Math.min(maxShow, 500); i++){
-            const name = names[i] || ('Var '+i);
-            const value = (window.$gameVariables ? $gameVariables.value(i) : '');
-            const row = el('div'); row.className='var-row';
-            const lbl = el('div'); lbl.style.width='180px'; lbl.textContent = `Var ${i}: ${name}`;
-            const inp = el('input'); inp.type='number'; inp.value = (value!==undefined?String(value):'0'); inp.id = 'cheat-var-'+i;
-            const btn = el('button'); btn.className='cheat-btn small'; btn.textContent='Set';
-            btn.onclick = (function(id){ return function(){ const v = Number($('cheat-var-'+id).value); if (!isNaN(v)) { $gameVariables.setValue(id,v); badgeMsg('Var '+id+' ← '+v); refreshVarList(); } }; })(i);
-            row.appendChild(lbl); row.appendChild(inp); row.appendChild(btn);
-            node.appendChild(row);
+        // event handlers
+        wrapper.addEventListener('click', (ev)=>{
+          const btn = ev.target.closest('button[data-set-time]');
+          if(btn){
+            const key = btn.getAttribute('data-set-time');
+            const vidInp = document.querySelector('.time-var-id[data-key="'+key+'"]');
+            const setVal = parseInt(document.getElementById('time-set-'+key).value,10);
+            if(!vidInp) return;
+            const vid = Number(vidInp.value);
+            if(isNaN(vid) || isNaN(setVal)) { alert('Invalid id or value'); return; }
+            $gameVariables.setValue(vid, setVal);
+            refreshTimeFields();
+            alert('Set '+key+' to '+setVal+' (var '+vid+')');
           }
-        } catch(e) {
-          node.textContent = 'Cannot list variables yet.';
-        }
+        });
+
+        document.getElementById('time-refresh').addEventListener('click', refreshTimeFields);
+        document.getElementById('time-set-all').addEventListener('click', ()=>{
+          document.querySelectorAll('.time-var-id').forEach(inp=>{
+            const key = inp.dataset.key;
+            const vid = Number(inp.value);
+            const setEl = document.getElementById('time-set-'+key);
+            const val = parseInt(setEl.value,10);
+            if(!isNaN(vid) && !isNaN(val)) $gameVariables.setValue(vid, val);
+          });
+          refreshTimeFields();
+          alert('Applied all time values to variables.');
+        });
+        document.getElementById('time-reset-defaults').addEventListener('click', ()=>{
+          document.querySelectorAll('.time-var-id').forEach(inp=>{
+            const key = inp.dataset.key;
+            inp.value = defaultTimeVarIds[key];
+          });
+          refreshTimeFields();
+        });
+
+        // initial refresh
+        refreshTimeFields();
       }
 
-      function refreshSwitchList(){
-        const node = $('cheat-switches-list'); if(!node) return;
-        node.innerHTML = '';
-        try {
-          const names = (window.$dataSystem && $dataSystem.switches) ? $dataSystem.switches : [];
-          const maxShow = Math.max(200, names.length);
-          for (let i = 1; i <= Math.min(maxShow, 500); i++){
-            const name = names[i] || ('Switch '+i);
-            const val = (window.$gameSwitches ? $gameSwitches.value(i) : false);
-            const row = el('div'); row.className='switch-row';
-            const lbl = el('div'); lbl.style.width='180px'; lbl.textContent = `Sw ${i}: ${name}`;
-            const chk = el('input'); chk.type='checkbox'; chk.checked = !!val; chk.id = 'cheat-sw-'+i;
-            chk.onchange = (function(id){ return function(){ $gameSwitches.setValue(id, this.checked); badgeMsg('Switch '+id+' ← '+this.checked); refreshSwitchList(); }; })(i);
-            row.appendChild(lbl); row.appendChild(chk);
-            node.appendChild(row);
+      // ---------- Vars tab ----------
+      function renderVarsTab(container){
+        const wrapper = el('div');
+        if(!window.$dataSystem || !window.$gameVariables || !window.$gameSwitches){
+          wrapper.textContent = 'Game not loaded yet.';
+          container.appendChild(wrapper);
+          return;
+        }
+
+        // Variables dropdown
+        const varRow = el('div');
+        varRow.className = 'row';
+        varRow.innerHTML =
+          `<label>Variable</label>
+           <select id="cheat-var-select" style="width:220px"></select>
+           <button class="btn small" id="cheat-var-refresh">Refresh</button>`;
+        wrapper.appendChild(varRow);
+
+        // var value editor
+        const varEdit = el('div');
+        varEdit.className = 'row';
+        varEdit.innerHTML =
+          `<label>Value</label>
+           <input type="number" id="cheat-var-value" value="0">
+           <button class="btn small" id="cheat-var-set">Set</button>
+           <button class="btn small" id="cheat-var-add">+1</button>`;
+        wrapper.appendChild(varEdit);
+
+        // Switches dropdown
+        const swRow = el('div');
+        swRow.className = 'row';
+        swRow.innerHTML =
+          `<label>Switch</label>
+           <select id="cheat-sw-select" style="width:220px"></select>
+           <button class="btn small" id="cheat-sw-refresh">Refresh</button>`;
+        wrapper.appendChild(swRow);
+
+        const swEdit = el('div');
+        swEdit.className = 'row';
+        swEdit.innerHTML =
+          `<label>Value</label>
+           <select id="cheat-sw-value"><option value="1">ON</option><option value="0">OFF</option></select>
+           <button class="btn small" id="cheat-sw-set">Set</button>`;
+        wrapper.appendChild(swEdit);
+
+        // helper: populate selects from $dataSystem
+        function populateVarsAndSwitches(){
+          const varSelect = document.getElementById('cheat-var-select');
+          varSelect.innerHTML='';
+          const vars = $dataSystem && $dataSystem.variables ? $dataSystem.variables : [];
+          for(let i=1;i<vars.length;i++){
+            const name = vars[i] && vars[i].length ? vars[i] : `Var ${i}`;
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `${i} — ${name}`;
+            varSelect.appendChild(opt);
           }
-        } catch(e){
-          node.textContent = 'Cannot list switches yet.';
+
+          const swSelect = document.getElementById('cheat-sw-select');
+          swSelect.innerHTML='';
+          const sws = $dataSystem && $dataSystem.switches ? $dataSystem.switches : [];
+          for(let i=1;i<sws.length;i++){
+            const name = sws[i] && sws[i].length ? sws[i] : `Switch ${i}`;
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `${i} — ${name}`;
+            swSelect.appendChild(opt);
+          }
+
+          // set current values
+          updateVarPreview();
+          updateSwPreview();
         }
+
+        function updateVarPreview(){
+          const sel = document.getElementById('cheat-var-select');
+          const id = Number(sel.value) || 0;
+          const cur = $gameVariables.value(id);
+          document.getElementById('cheat-var-value').value = (typeof cur !== 'undefined' ? cur : '');
+        }
+        function updateSwPreview(){
+          const sel = document.getElementById('cheat-sw-select');
+          const id = Number(sel.value) || 0;
+          const cur = $gameSwitches.value(id) ? 1 : 0;
+          document.getElementById('cheat-sw-value').value = cur;
+        }
+
+        // actions
+        wrapper.querySelector('#cheat-var-refresh').addEventListener('click', populateVarsAndSwitches);
+        wrapper.querySelector('#cheat-var-set').addEventListener('click', ()=>{
+          const id = Number(document.getElementById('cheat-var-select').value);
+          const v = parseInt(document.getElementById('cheat-var-value').value,10);
+          if(!isNaN(id) && !isNaN(v)) {
+            $gameVariables.setValue(id, v);
+            alert(`Var ${id} set to ${v}`);
+          }
+        });
+        wrapper.querySelector('#cheat-var-add').addEventListener('click', ()=>{
+          const id = Number(document.getElementById('cheat-var-select').value);
+          const cur = Number($gameVariables.value(id) || 0);
+          $gameVariables.setValue(id, cur+1);
+          updateVarPreview();
+        });
+
+        wrapper.querySelector('#cheat-sw-refresh').addEventListener('click', populateVarsAndSwitches);
+        wrapper.querySelector('#cheat-sw-set').addEventListener('click', ()=>{
+          const id = Number(document.getElementById('cheat-sw-select').value);
+          const v = Number(document.getElementById('cheat-sw-value').value) === 1;
+          if(!isNaN(id)) {
+            $gameSwitches.setValue(id, v);
+            alert(`Switch ${id} set to ${v ? 'ON' : 'OFF'}`);
+          }
+        });
+
+        // update previews when selection changed
+        wrapper.querySelector('#cheat-var-select').addEventListener('change', updateVarPreview);
+        wrapper.querySelector('#cheat-sw-select').addEventListener('change', updateSwPreview);
+
+        container.appendChild(wrapper);
+        // initial populate
+        populateVarsAndSwitches();
       }
 
-      /* ========= Virtual ESC (single-trigger only) ========= */
-      (function(){
-        const btn = $('escButton');
-        // We'll disable the button briefly after a tap to avoid repeated triggers.
-        let disabled = false;
-        async function openMenuOnce(e){
+      // ---------- Settings tab ----------
+      function renderSettingsTab(container){
+        const wrapper = el('div');
+        wrapper.innerHTML =
+          `<div class="row"><label>Auto-save</label>
+             <select id="autosave-interval" style="width:120px">
+               <option value="300000">5 min</option>
+               <option value="600000">10 min</option>
+               <option value="900000">15 min</option>
+               <option value="1200000">20 min</option>
+               <option value="1800000">30 min</option>
+             </select>
+             <label style="width:70px">Slot</label>
+             <select id="autosave-slot" style="width:80px">
+               <option value="1">1</option>
+               <option value="2">2</option>
+               <option value="3">3</option>
+               <option value="4">4</option>
+               <option value="5">5</option>
+               <option value="6">6</option>
+             </select>
+             <button class="btn small" id="autosave-toggle">Enable</button>
+           </div>
+           <div class="row">
+             <button class="btn small" id="save-now">Save Now</button>
+             <button class="btn small" id="load-now">Load Now</button>
+             <select id="manual-slot" style="width:90px">
+               <option value="1">slot 1</option><option value="2">slot 2</option><option value="3">slot 3</option>
+               <option value="4">slot 4</option><option value="5">slot 5</option><option value="6">slot 6</option>
+             </select>
+           </div>
+           <div class="row"><span id="settingsStatus" class="status">Auto-save: OFF</span></div>
+           <div class="row"><button class="btn small" id="force-open-save-menu">Force open Save menu</button>
+             <button class="btn small" id="force-open-load-menu">Force open Load menu</button>
+           </div>
+           <div class="sub">Auto-save is OFF by default (will not persist between page reloads).</div>`;
+        container.appendChild(wrapper);
+
+        // wire UI
+        const intSel = document.getElementById('autosave-interval');
+        const slotSel = document.getElementById('autosave-slot');
+        const toggleBtn = document.getElementById('autosave-toggle');
+        const manualSlot = document.getElementById('manual-slot');
+        const saveNowBtn = document.getElementById('save-now');
+        const loadNowBtn = document.getElementById('load-now');
+        const settingsStatus = document.getElementById('settingsStatus');
+
+        // initial values
+        intSel.value = String(autosaveIntervalMs);
+        slotSel.value = String(autosaveSlot);
+        renderSettingsStatus();
+
+        intSel.addEventListener('change', ()=> {
+          autosaveIntervalMs = Number(intSel.value);
+          if(autosaveEnabled){ enableAutosave(true); }
+          renderSettingsStatus();
+        });
+        slotSel.addEventListener('change', ()=> {
+          autosaveSlot = Number(slotSel.value);
+          renderSettingsStatus();
+        });
+        toggleBtn.addEventListener('click', ()=>{
+          enableAutosave(!autosaveEnabled);
+          toggleBtn.textContent = autosaveEnabled ? 'Disable' : 'Enable';
+        });
+
+        saveNowBtn.addEventListener('click', ()=>{
+          const s = Number(manualSlot.value) || 1;
+          doSave(s,false);
+        });
+        loadNowBtn.addEventListener('click', ()=>{
+          const s = Number(manualSlot.value) || 1;
+          if(confirm('Load slot '+s+'? Current progress will be replaced.')) doLoad(s);
+        });
+
+        // force open save/load menu (attempt)
+        document.getElementById('force-open-save-menu').addEventListener('click', ()=>{
+          // Many games use Scene_Save and Scene_Load.
           try {
-            if (disabled) return;
-            disabled = true;
-            setTimeout(()=> disabled = false, 600); // 600ms debounce
+            if(window.SceneManager){
+              SceneManager.push(Scene_Save);
+            } else {
+              alert('SceneManager or Scene_Save not available.');
+            }
+          } catch(e){ alert('Cannot open save menu: '+e.message); }
+        });
+        document.getElementById('force-open-load-menu').addEventListener('click', ()=>{
+          try {
+            if(window.SceneManager){
+              SceneManager.push(Scene_Load);
+            } else {
+              alert('SceneManager or Scene_Load not available.');
+            }
+          } catch(e){ alert('Cannot open load menu: '+e.message); }
+        });
 
-            e && (e.preventDefault && e.preventDefault());
-            // Prefer direct open of menu in map
+        renderSettingsStatus();
+      }
+
+      // ---------- ESC button (single trigger, no repeating) ----------
+      (function(){
+        const btn = document.getElementById('escButton');
+        let disabled = false;
+        function openMenuDirect(){
+          try {
             if (window.SceneManager && SceneManager._scene) {
               const sc = SceneManager._scene;
               if (window.Scene_Map && sc instanceof Scene_Map) {
-                if (window.$gamePlayer && $gamePlayer.canMove()) {
+                if (window.$gamePlayer && $gamePlayer.canMove && $gamePlayer.canMove()) {
                   if (window.SoundManager && SoundManager.playOk) SoundManager.playOk();
                   if (window.Window_MenuCommand && Window_MenuCommand.initCommandPosition) {
-                    try { Window_MenuCommand.initCommandPosition(); } catch(e){}
+                    Window_MenuCommand.initCommandPosition();
                   }
-                  try { SceneManager.push(Scene_Menu); } catch(e){ console.warn(e); }
-                  return;
+                  SceneManager.push(Scene_Menu);
+                  return true;
                 }
               }
+              // if in another scene and there's a Scene_Base.prototype.popScene or SceneManager.pop, try goBack
+              if (SceneManager._stack && SceneManager._stack.length > 1) {
+                if(typeof SceneManager.pop === 'function') SceneManager.pop();
+                else if(typeof SceneManager.goto === 'function') SceneManager.goto(Scene_Map);
+                return true;
+              }
             }
-            // fallback: dispatch a single keydown/up escape event
+          } catch(e) {}
+          return false;
+        }
+        function onEscPress(e){
+          e && e.preventDefault();
+          if(disabled) return;
+          disabled = true;
+          setTimeout(()=> disabled = false, 450); // prevent retrigger spam
+          if (!openMenuDirect()) {
             try {
               const ev = new KeyboardEvent('keydown', {key:'Escape', code:'Escape', bubbles:true, cancelable:true});
               Object.defineProperty(ev, 'keyCode', {get: ()=>27});
@@ -695,28 +781,30 @@
                 Object.defineProperty(ev2, 'which',   {get: ()=>27});
                 document.dispatchEvent(ev2);
                 window.dispatchEvent(ev2);
-              }, 16);
-            } catch(e){ console.warn('Synthetic key dispatch failed', e); }
-          } catch(e){ console.warn(e); disabled=false; }
+              },16);
+            } catch(_) {}
+          }
         }
-        // use touchstart and click
-        btn.addEventListener('click', openMenuOnce, {passive:false});
-        btn.addEventListener('touchstart', function(e){ openMenuOnce(e); }, {passive:false});
+        btn.addEventListener('click', onEscPress, {passive:false});
+        btn.addEventListener('touchstart', onEscPress, {passive:false});
       })();
 
-      /* ===== Expose some helpers globally for console convenience ===== */
-      window.cheat = {
-        saveNow: forceSave,
-        loadOpen: forceLoad,
-        setMoney: setMoney,
-        setVar: function(id, v){ if ($gameVariables) $gameVariables.setValue(Number(id), Number(v)); },
-        setSwitch: function(id, b){ if ($gameSwitches) $gameSwitches.setValue(Number(id), !!b); }
-      };
+      // ---------- small helpers ----------
+      function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-      // Auto-refresh current tab when opened and game becomes ready
-      whenGameReady(()=>{ if (panel.classList.contains('open') && panel._currentTab) showCheatTab(panel._currentTab); });
+      // open money tab by default when panel opened first time
+      // expose function for console
+      window.__renderCheat = function(tab){ showCheatTab(tab||'money'); };
+
+      // When page loaded, don't auto-open; panel is hidden and autosave OFF by default
+      enableAutosave(false);
+
+      // Expose save/load for console
+      window.__doSave = doSave;
+      window.__doLoad = doLoad;
+
+      // Done
     })();
-
     </script>
   </body>
 </html>
