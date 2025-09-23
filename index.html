@@ -226,25 +226,24 @@
       async function doSave(slot, silent){
         if(!window.DataManager || typeof DataManager.saveGame !== 'function'){
           alert('Save function not available in this environment.');
-          return false;
+          return;
         }
         slot = Number(slot) || 1;
         try {
           if(!silent) console.log('Saving to slot', slot);
           const ok = await DataManager.saveGame(slot);
           if(!silent) alert(ok ? `Saved slot ${slot}` : `Save failed`);
-          return ok;
+          // update UI if needed
         } catch(e){
           console.error('Save error', e);
-          if(!silent) alert('Save failed: '+(e && e.message ? e.message : e));
-          return false;
+          alert('Save failed: '+(e && e.message ? e.message : e));
         }
       }
 
       async function doLoad(slot){
         if(!window.DataManager || typeof DataManager.loadGame !== 'function'){
           alert('Load function not available in this environment.');
-          return false;
+          return;
         }
         slot = Number(slot) || 1;
         try {
@@ -260,11 +259,9 @@
           } else {
             alert('Load failed (no saved data).');
           }
-          return ok;
         } catch(e){
           console.error('Load error', e);
           alert('Load failed: '+(e && e.message ? e.message : e));
-          return false;
         }
       }
 
@@ -394,21 +391,21 @@
         wrapper.addEventListener('click', (ev)=>{
           const hpBtn = ev.target.closest('button[data-set-hp]');
           if(hpBtn){
-            const id = Number(hpBtn.getAttribute('data-set-hp'));
+            const id = Number(hpBtn.dataset.setHp || hpBtn.getAttribute('data-set-hp'));
             const val = parseInt(document.getElementById('hp-'+id).value,10);
             if(!isNaN(val)) { const a = $gameActors.actor(id); if(a) a.setHp(val); alert('HP set'); }
             return;
           }
           const mpBtn = ev.target.closest('button[data-set-mp]');
           if(mpBtn){
-            const id = Number(mpBtn.getAttribute('data-set-mp'));
+            const id = Number(mpBtn.dataset.setMp || mpBtn.getAttribute('data-set-mp'));
             const val = parseInt(document.getElementById('mp-'+id).value,10);
             if(!isNaN(val)) { const a = $gameActors.actor(id); if(a) a.setMp(val); alert('MP set'); }
             return;
           }
           const lvBtn = ev.target.closest('button[data-set-lv]');
           if(lvBtn){
-            const id = Number(lvBtn.getAttribute('data-set-lv'));
+            const id = Number(lvBtn.dataset.setLv || lvBtn.getAttribute('data-set-lv'));
             const val = parseInt(document.getElementById('lv-'+id).value,10);
             if(!isNaN(val)) { const a = $gameActors.actor(id); if(a) a.changeLevel(val,false); alert('Level set'); }
             return;
@@ -433,7 +430,7 @@
           container.appendChild(wrapper);
           return;
         }
-        container.appendChild(el('div','<div class="sub">If displayed values look wrong, change the Var ID to the variable your game uses (the defaults are from your Chronus plugin settings).</div>'));
+        container.appendChild(el('div','<div class="sub">If displayed values look wrong, change the Var ID to the variable your game uses. This tab will try to call Chronus/related API if available so the in-game clock updates immediately.</div>'));
 
         // build a control row for each field: label, var-id input (editable), current value, set input
         Object.keys(defaultTimeVarIds).forEach(key=>{
@@ -458,6 +455,7 @@
           `<button class="btn small" id="time-refresh">Refresh</button>
            <button class="btn small" id="time-set-all">Apply all</button>
            <button class="btn small" id="time-reset-defaults">Reset var-ids</button>
+           <button class="btn small" id="time-force-update">Force Chronus update</button>
            <div class="sub">Weekday / Month / Day / Hour / Minute</div>`;
         wrapper.appendChild(toolsRow);
         container.appendChild(wrapper);
@@ -467,7 +465,7 @@
           document.querySelectorAll('.time-var-id').forEach(inp=>{
             const key = inp.dataset.key;
             const vid = Number(inp.value) || defaultTimeVarIds[key];
-            const cur = (typeof $gameVariables.value === 'function') ? $gameVariables.value(vid) : undefined;
+            const cur = $gameVariables.value(vid);
             const displayEl = document.getElementById('time-current-'+key);
             if(displayEl) displayEl.value = (typeof cur !== 'undefined' ? cur : '');
             // also prefill set input with current value
@@ -476,19 +474,35 @@
           });
         }
 
-        // After changing the variables, try to refresh map UI and plugin display
-        function attemptRefreshAfterTimeChange(){
+        // attempt to trigger Chronus or other time manager after changing variables
+        function triggerChronusUpdate() {
+          // 1) If Chronus plugin object exists and provides an API, try known method names
+          const attempts = [
+            ()=> { if(typeof Chronus === 'object' && typeof Chronus.update === 'function'){ Chronus.update(); return true;} return false; },
+            ()=> { if(typeof Chronus === 'object' && typeof Chronus.refresh === 'function'){ Chronus.refresh(); return true;} return false; },
+            ()=> { if(typeof ChronusManager === 'object' && typeof ChronusManager.refresh === 'function'){ ChronusManager.refresh(); return true;} return false; },
+            ()=> { if(typeof ChronusCore === 'object' && typeof ChronusCore.setTime === 'function'){ ChronusCore.setTime(); return true;} return false; },
+            ()=> { if(typeof $gameSystem !== 'undefined' && typeof $gameSystem._chronus !== 'undefined' && typeof $gameSystem._chronus.forceRefresh === 'function'){ $gameSystem._chronus.forceRefresh(); return true;} return false; },
+            ()=> { // dispatch a custom event many plugins might listen to
+                  try { window.dispatchEvent(new CustomEvent('chronus:changed')); return true; } catch(e){ return false; }
+                }
+          ];
+          let ok = false;
+          for(const fn of attempts){
+            try { if(fn()) { ok = true; /* don't break - allow multiple */ } } catch(e){ /* ignore */ }
+          }
+
+          // 2) Try to refresh current scene/map visuals
           try {
-            // If Chronus exposes an update method (some plugins do), call it (best-effort)
-            if(window.Chronus && typeof window.Chronus.update === 'function'){
-              try { window.Chronus.update(); } catch(e) { /* ignore */ }
+            if(window.SceneManager && SceneManager._scene) {
+              const sc = SceneManager._scene;
+              if(typeof sc.requestRefresh === 'function') sc.requestRefresh();
+              if(typeof sc.refresh === 'function') sc.refresh();
             }
-            // Request map and scene refreshes
             if(window.$gameMap && typeof $gameMap.requestRefresh === 'function') $gameMap.requestRefresh();
-            if(window.SceneManager && SceneManager._scene && typeof SceneManager._scene.refresh === 'function') {
-              try { SceneManager._scene.refresh(); } catch(e) { /* ignore */ }
-            }
-          } catch(e){}
+          } catch(e){ /* ignore */ }
+
+          return ok;
         }
 
         // event handlers
@@ -502,9 +516,12 @@
             const vid = Number(vidInp.value);
             if(isNaN(vid) || isNaN(setVal)) { alert('Invalid id or value'); return; }
             $gameVariables.setValue(vid, setVal);
+
+            // try to apply via Chronus if available (so in-game changes immediately)
+            const appliedViaChronus = triggerChronusUpdate();
+
             refreshTimeFields();
-            attemptRefreshAfterTimeChange();
-            alert('Set '+key+' to '+setVal+' (var '+vid+')');
+            alert('Set '+key+' to '+setVal+' (var '+vid+')' + (appliedViaChronus ? ' — Chronus/scene update attempted.' : ' — saved to variable only.'));
           }
         });
 
@@ -517,9 +534,9 @@
             const val = parseInt(setEl.value,10);
             if(!isNaN(vid) && !isNaN(val)) $gameVariables.setValue(vid, val);
           });
+          const applied = triggerChronusUpdate();
           refreshTimeFields();
-          attemptRefreshAfterTimeChange();
-          alert('Applied all time values to variables.');
+          alert('Applied all time values to variables.' + (applied ? ' Chronus/scene update attempted.' : ''));
         });
         document.getElementById('time-reset-defaults').addEventListener('click', ()=>{
           document.querySelectorAll('.time-var-id').forEach(inp=>{
@@ -527,6 +544,10 @@
             inp.value = defaultTimeVarIds[key];
           });
           refreshTimeFields();
+        });
+        document.getElementById('time-force-update').addEventListener('click', ()=>{
+          const ok = triggerChronusUpdate();
+          alert('Force update attempted.' + (ok ? ' (something responded)' : ' (no Chronus-like API detected)'));
         });
 
         // initial refresh
@@ -611,7 +632,7 @@
           const sel = document.getElementById('cheat-var-select');
           const id = Number(sel.value) || 0;
           const cur = $gameVariables.value(id);
-          document.getElementById('cheat-var-value').value = (typeof cur !== 'undefined' ? cur : 0);
+          document.getElementById('cheat-var-value').value = (typeof cur !== 'undefined' ? cur : '');
         }
         function updateSwPreview(){
           const sel = document.getElementById('cheat-sw-select');
@@ -733,6 +754,7 @@
 
         // force open save/load menu (attempt)
         document.getElementById('force-open-save-menu').addEventListener('click', ()=>{
+          // Many games use Scene_Save and Scene_Load.
           try {
             if(window.SceneManager){
               SceneManager.push(Scene_Save);
@@ -772,7 +794,7 @@
                   return true;
                 }
               }
-              // Attempt to pop the scene if there's a stack (go back)
+              // if in another scene and there's a Scene_Base.prototype.popScene or SceneManager.pop, try goBack
               if (SceneManager._stack && SceneManager._stack.length > 1) {
                 if(typeof SceneManager.pop === 'function') SceneManager.pop();
                 else if(typeof SceneManager.goto === 'function') SceneManager.goto(Scene_Map);
@@ -783,7 +805,7 @@
           return false;
         }
         function onEscPress(e){
-          e && e.preventDefault();
+          e && e.preventDefault && e.preventDefault();
           if(disabled) return;
           disabled = true;
           setTimeout(()=> disabled = false, 450); // prevent retrigger spam
